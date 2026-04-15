@@ -1,0 +1,41 @@
+id,nom,type_id,puissance,precision,categorie
+1,Charge,1,35,95,Physique
+2,Tranche,1,70,100,Physique
+3,Rugissement,1,0,100,Statut
+4,Hyper Rayon,1,150,90,Spéciale
+5,Jackpot,1,40,100,Physique
+6,Lance-Flammes,2,95,100,Spéciale
+7,Flammèche,2,40,100,Spéciale
+8,Déflagration,2,110,85,Spéciale
+9,Pistolet à O,3,40,100,Spéciale
+10,Hydrocanon,3,110,80,Spéciale
+11,Cascade,3,80,100,Physique
+12,Fouet Liane,4,45,100,Physique
+13,Tranch'Herbe,4,55,95,Physique
+14,Lance-Soleil,4,120,100,Spéciale
+15,Tonnerre,5,90,100,Spéciale
+16,Éclair,5,40,100,Spéciale
+17,Fatal-Foudre,5,110,70,Spéciale
+18,Blizzard,6,110,70,Spéciale
+19,Rayon Glace,6,90,100,Spéciale
+20,Poing Karaté,7,50,100,Physique
+21,Pied Sauté,7,70,95,Physique
+22,Dard-Venin,8,15,100,Physique
+23,Acide,8,40,100,Spéciale
+24,Séisme,9,100,100,Physique
+25,Tunnel,9,80,100,Physique
+26,Miro-Vol,10,60,100,Physique
+27,Bourrasque,10,40,100,Spéciale
+28,Psyko,11,90,100,Spéciale
+29,Dard-Nuée,12,14,85,Physique
+30,Jet-Pierres,13,50,90,Physique
+31,Léchouille,14,30,100,Physique
+32,Colère du Dragon,15,40,100,Spéciale
+33,Plaquage,1,85,100,Physique
+34,Surf,3,90,100,Spéciale
+35,Coupe,1,50,95,Physique
+36,Coud'Boul,12,25,100,Physique
+37,Vive-Attaque,1,40,100,Physique
+38,Griffe,1,40,100,Physique
+39,Morsure,1,60,100,Physique
+40,Soin,1,0,100,Statut

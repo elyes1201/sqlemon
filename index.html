@@ -1,0 +1,3437 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQLemon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red:      #CC0000;
+  --red-hi:   #EE3333;
+  --red-dk:   #991100;
+  --red-deep: #550000;
+  --red-edge: #330000;
+  --hinge-bg: #660000;
+
+  --lcd-bg:   #030A03;
+  --lcd-on:   #39FF14;
+  --lcd-mid:  #23C40B;
+  --lcd-dim:  #0F5A06;
+  --lcd-off:  #081208;
+
+  --bezel:    #1A1A1A;
+  --bezel2:   #111111;
+  --fn:       'Press Start 2P', monospace;
+  --fn-vt:    'VT323', monospace;
+  --yellow:   #FFDE00;
+  --off-white:#F8F8F8;
+}
+
+/* ── BODY ────────────────────────────────────────────────────────────────── */
+body {
+  font-family: var(--fn);
+  background: #000;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  gap: 14px;
+}
+
+/* ── COUCHES DE FOND (backgrounds par acte) ──────────────────────────────── */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-size: auto;
+  background-repeat: repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  opacity: 0;
+  transition: opacity 1s ease;
+  pointer-events: none;
+}
+.bg-layer.active { opacity: 1; }
+
+.bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgba(0,0,0,0.50);
+  pointer-events: none;
+}
+
+/* ── TITRE AU-DESSUS ─────────────────────────────────────────────────────── */
+.page-title {
+  font-size: 11px;
+  letter-spacing: 3px;
+  animation: title-flash 1.0s step-end infinite;
+}
+
+/* ── POKÉDEX SHELL ───────────────────────────────────────────────────────── */
+.pokedex {
+  display: flex;
+  width: 100%;
+  max-width: 960px;
+  min-height: 560px;
+  filter:
+    drop-shadow(0 0 40px rgba(200,0,0,0.35))
+    drop-shadow(0 30px 70px rgba(0,0,0,0.95));
+  animation: pokedex-breathe 4s ease-in-out infinite;
+}
+@keyframes pokedex-breathe {
+  0%,100% { filter: drop-shadow(0 0 35px rgba(200,0,0,0.3)) drop-shadow(0 30px 70px rgba(0,0,0,0.95)); }
+  50%     { filter: drop-shadow(0 0 50px rgba(200,0,0,0.5)) drop-shadow(0 30px 70px rgba(0,0,0,0.95)); }
+}
+
+/* ═══ MOITIÉ GAUCHE ══════════════════════════════════════════════════════ */
+.half-left {
+  flex: 0 0 390px;
+  background: linear-gradient(150deg, var(--red-hi) 0%, var(--red) 35%, var(--red-dk) 100%);
+  border-radius: 22px 0 0 44px;
+  padding: 18px 14px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  position: relative;
+
+  box-shadow:
+    inset 0  4px 0 rgba(255,180,180,0.22),
+    inset 0 -4px 0 rgba(0,0,0,0.28),
+    inset -2px 0 0 rgba(0,0,0,0.18);
+}
+
+/* ── LEDs ─────────────────────────────────────────────────────────────── */
+.leds {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.led { border-radius: 50%; flex-shrink: 0; position: relative; }
+
+.led-blue {
+  width: 28px; height: 28px;
+  background: radial-gradient(circle at 36% 32%, #AACCFF, #1144EE);
+  box-shadow:
+    0 0 14px #3366FF,
+    0 0 28px rgba(50,100,255,0.35),
+    inset 0 2px 4px rgba(255,255,255,0.55),
+    0 0 0 2px rgba(255,255,255,0.08);
+}
+.led-blue::after {
+  content: '';
+  position: absolute;
+  top: 5px; left: 7px;
+  width: 7px; height: 5px;
+  background: rgba(255,255,255,0.55);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+}
+
+.led-yellow {
+  width: 16px; height: 16px;
+  background: radial-gradient(circle at 36% 32%, #FFFF99, #DDAA00);
+  box-shadow:
+    0 0 10px #FFCC00,
+    0 0 20px rgba(255,200,0,0.35),
+    inset 0 2px 3px rgba(255,255,255,0.5);
+}
+
+.led-red-dot {
+  width: 13px; height: 13px;
+  background: radial-gradient(circle at 36% 32%, #FF9999, #EE0000);
+  box-shadow:
+    0 0 10px #FF2222,
+    0 0 20px rgba(255,30,30,0.35),
+    inset 0 2px 3px rgba(255,255,255,0.4);
+}
+
+.led-label {
+  font-size: 7px;
+  color: rgba(255,200,200,0.45);
+  letter-spacing: 2px;
+  margin-left: 6px;
+}
+
+/* ── GRAND ÉCRAN ─────────────────────────────────────────────────────── */
+.screen-frame {
+  background: #222;
+  border-radius: 8px;
+  padding: 7px;
+  box-shadow:
+    inset 0 3px 6px rgba(0,0,0,0.7),
+    0 2px 0 rgba(255,150,150,0.1);
+}
+
+.screen-main {
+  background: var(--lcd-bg);
+  border-radius: 4px;
+  padding: 12px;
+  min-height: 255px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  box-shadow:
+    inset 0 0 0 2px rgba(248,248,248,0.12),
+    inset 0 0 0 4px rgba(0,0,0,0.8),
+    inset 0 0 40px rgba(57,255,20,0.03);
+}
+
+/* Scanlines */
+.screen-main::after, .screen-small::after, .screen-sql-inner::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px, transparent 2px,
+    rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
+  );
+  pointer-events: none; z-index: 10; border-radius: inherit;
+}
+
+.lcd-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--lcd-dim);
+  padding-bottom: 7px;
+}
+
+.lcd-quest-num {
+  font-size: 7px;
+  color: var(--lcd-dim);
+}
+.lcd-quest-num b { color: var(--lcd-on); font-weight: normal; }
+
+.lcd-quest-titre {
+  font-size: 9px;
+  color: var(--lcd-on);
+  line-height: 1.9;
+  text-shadow: 0 0 10px rgba(57,255,20,0.65);
+  margin-bottom: 2px;
+}
+
+.lcd-desc {
+  font-family: var(--fn-vt);
+  font-size: 15px;
+  color: var(--lcd-mid);
+  line-height: 1.5;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--lcd-dim) transparent;
+}
+.lcd-desc::-webkit-scrollbar { width: 3px; }
+.lcd-desc::-webkit-scrollbar-thumb { background: var(--lcd-dim); }
+
+.lcd-desc code   { font-family: var(--fn); font-size: 7px; color: var(--lcd-on); text-shadow: 0 0 7px rgba(57,255,20,0.55); }
+.lcd-desc strong { color: var(--lcd-on); font-weight: normal; }
+.lcd-desc small  { color: var(--lcd-dim); font-size: 11px; }
+.lcd-desc em     { color: #66FF44; font-style: normal; }
+
+.lcd-indice {
+  font-family: var(--fn-vt);
+  font-size: 14px;
+  color: #AAFF44;
+  line-height: 1.5;
+  border-top: 1px solid var(--lcd-dim);
+  padding-top: 8px;
+  white-space: pre-line;
+  display: none;
+}
+.lcd-indice.visible { display: block; animation: lcd-fadein .25s ease; }
+
+/* ── PETIT ÉCRAN ─────────────────────────────────────────────────────── */
+.screen-small-frame {
+  background: #222;
+  border-radius: 6px;
+  padding: 5px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.7);
+}
+
+.screen-small {
+  background: var(--lcd-bg);
+  border-radius: 3px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  min-height: 46px;
+}
+
+.ss-quest {
+  font-size: 7px;
+  color: var(--lcd-dim);
+  white-space: nowrap;
+}
+.ss-quest span { color: var(--lcd-on); text-shadow: 0 0 7px rgba(57,255,20,0.6); }
+
+.prog-pips {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  max-width: 200px;
+}
+
+.pip {
+  width: 11px; height: 11px;
+  border-radius: 2px;
+  border: 1px solid var(--lcd-dim);
+  background: var(--lcd-off);
+  cursor: pointer;
+  transition: all .12s;
+  font-size: 0;
+}
+.pip:hover             { border-color: var(--lcd-on); }
+.pip.p-active          { background: var(--lcd-dim); border-color: var(--lcd-on); }
+.pip.p-ok              { background: var(--lcd-on); box-shadow: 0 0 5px rgba(57,255,20,.6); }
+.pip.p-fail            { background: #FF3300; border-color: #FF6633; }
+
+/* ═══ CHARNIÈRE ══════════════════════════════════════════════════════════ */
+.hinge {
+  width: 20px;
+  background: linear-gradient(to right, #770000, #3A0000 50%, #770000);
+  border-left:  2px solid var(--red-edge);
+  border-right: 2px solid var(--red-edge);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  padding: 40px 0;
+}
+
+.screw {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #555, #111);
+  box-shadow: 0 0 0 1px #1a0000, inset 0 1px 2px rgba(255,255,255,0.08);
+}
+
+/* ═══ MOITIÉ DROITE ══════════════════════════════════════════════════════ */
+.half-right {
+  flex: 1;
+  background: linear-gradient(150deg, var(--red-hi) 0%, var(--red) 35%, var(--red-dk) 100%);
+  border-radius: 0 22px 22px 0;
+  padding: 18px 20px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+
+  box-shadow:
+    inset 0  4px 0 rgba(255,180,180,0.22),
+    inset 0 -4px 0 rgba(0,0,0,0.28),
+    inset  2px 0 0 rgba(0,0,0,0.18);
+}
+
+/* ── ÉCRAN SQL ───────────────────────────────────────────────────────── */
+.screen-sql-frame {
+  background: #222;
+  border-radius: 7px;
+  padding: 6px;
+  box-shadow: inset 0 3px 6px rgba(0,0,0,0.7);
+}
+
+.screen-sql-inner {
+  background: var(--lcd-bg);
+  border-radius: 4px;
+  padding: 10px;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 2px rgba(248,248,248,0.10),
+    inset 0 0 0 4px rgba(0,0,0,0.8),
+    inset 0 0 25px rgba(57,255,20,0.03);
+}
+
+.sql-cursor-line {
+  font-size: 8px;
+  color: var(--lcd-dim);
+  margin-bottom: 5px;
+}
+
+#requete {
+  width: 100%;
+  min-height: 110px;
+  background: transparent;
+  border: none; outline: none;
+  color: var(--lcd-on);
+  font-family: var(--fn);
+  font-size: 8px;
+  line-height: 2;
+  resize: none;
+  caret-color: var(--lcd-on);
+  text-shadow: 0 0 8px rgba(57,255,20,0.55);
+  position: relative; z-index: 2;
+}
+#requete::placeholder {
+  color: var(--lcd-dim);
+}
+
+/* ── FEEDBACK LCD ─────────────────────────────────────────────────────── */
+.feedback {
+  font-family: var(--fn-vt);
+  font-size: 15px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  line-height: 1.4;
+  display: none;
+}
+.feedback.vis     { display: block; animation: lcd-fadein .3s ease; }
+.feedback.ok      { color: var(--lcd-on); background: #001200; border: 3px solid #000;
+                    box-shadow: inset 0 0 0 2px rgba(57,255,20,0.2), inset 0 0 0 4px #000;
+                    text-shadow: 0 0 8px rgba(57,255,20,0.7); }
+.feedback.bad     { color: #FF4422; background: #1A0500; border: 3px solid #000;
+                    box-shadow: inset 0 0 0 2px rgba(255,50,20,0.15), inset 0 0 0 4px #000;
+                    animation: shake .4s ease; }
+.feedback.sql-err { color: #FF8800; background: #150800; border: 3px solid #000;
+                    box-shadow: inset 0 0 0 2px rgba(255,140,0,0.15), inset 0 0 0 4px #000; }
+
+/* ── BOUTONS ──────────────────────────────────────────────────────────── */
+.btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 7px;
+}
+
+.btn {
+  font-family: var(--fn);
+  font-size: 7px;
+  color: #FFCCCC;
+  background: linear-gradient(160deg, #EE2222 0%, #AA1100 60%, #881000 100%);
+  border: 2px solid #000;
+  border-radius: 4px;
+  padding: 10px 4px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  user-select: none;
+  box-shadow:
+    0 5px 0 #1a0000,
+    0 7px 10px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,180,180,0.25),
+    inset 0 0 0 1px rgba(255,255,255,0.06);
+  transition: transform .07s, box-shadow .07s;
+}
+.btn:hover:not(:disabled) {
+  background: linear-gradient(160deg, #FF3333 0%, #BB1100 60%, #991100 100%);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(5px);
+  box-shadow: 0 0 0 #1a0000, 0 2px 5px rgba(0,0,0,0.4),
+              inset 0 2px 4px rgba(0,0,0,0.4);
+}
+.btn:disabled { opacity: .35; cursor: default; }
+
+/* Bouton Valider sur toute la largeur */
+.btn-valider {
+  grid-column: 1 / -1;
+  font-size: 9px;
+  color: #FFFFFF;
+  padding: 13px;
+  letter-spacing: 2px;
+  background: linear-gradient(160deg, #FF2222 0%, #CC0000 50%, #990000 100%);
+  border: 2px solid #000;
+  box-shadow:
+    0 6px 0 #1a0000,
+    0 9px 16px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,200,200,0.3),
+    inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.btn-valider:active:not(:disabled) {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 #1a0000, 0 3px 7px rgba(0,0,0,0.45),
+              inset 0 3px 6px rgba(0,0,0,0.45);
+}
+
+/* ── RÉSULTATS ────────────────────────────────────────────────────────── */
+.results-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--red-deep) transparent;
+}
+.results-zone::-webkit-scrollbar { width: 4px; }
+.results-zone::-webkit-scrollbar-thumb { background: var(--red-deep); border-radius: 2px; }
+
+.r-block { display: flex; flex-direction: column; gap: 5px; }
+
+.r-label {
+  font-family: var(--fn-vt);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--lcd-dim);
+}
+.r-label.r-ok   { color: var(--lcd-on); text-shadow: 0 0 7px rgba(57,255,20,0.5); }
+.r-label.r-bad  { color: #FF4400; }
+.r-label .r-count { color: var(--lcd-dim); }
+
+.table-lcd-wrap {
+  background: var(--lcd-bg);
+  border: 2px solid var(--bezel);
+  border-radius: 3px;
+  overflow: auto;
+  max-height: 160px;
+  box-shadow: 0 0 0 1px #2a2a2a;
+  scrollbar-width: thin;
+  scrollbar-color: var(--lcd-dim) transparent;
+}
+.table-lcd-wrap::-webkit-scrollbar { width: 3px; height: 3px; }
+.table-lcd-wrap::-webkit-scrollbar-thumb { background: var(--lcd-dim); border-radius: 2px; }
+
+.table-lcd { width: 100%; border-collapse: collapse; font-size: 7px; }
+
+.table-lcd th {
+  background: var(--lcd-off);
+  color: var(--lcd-on);
+  padding: 5px 8px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--lcd-dim);
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px rgba(57,255,20,0.4);
+}
+.table-lcd td {
+  color: var(--lcd-mid);
+  padding: 4px 8px;
+  border-bottom: 1px solid #0A180A;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.table-lcd td.null-v { color: var(--lcd-dim); font-style: normal; }
+.table-lcd tr:hover td { background: #060E06; }
+
+.table-trunc {
+  font-size: 6px;
+  color: var(--lcd-dim);
+  padding: 4px 8px;
+  background: var(--lcd-off);
+  border-top: 1px solid #0A180A;
+}
+
+/* ── ANIMATIONS ───────────────────────────────────────────────────────── */
+@keyframes lcd-fadein {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%,60% { transform: translateX(-5px); }
+  40%,80% { transform: translateX(5px); }
+}
+@keyframes blink {
+  0%,49% { opacity: 1; } 50%,100% { opacity: 0; }
+}
+
+/* ── LOADER ───────────────────────────────────────────────────────────── */
+.loader-btn {
+  font-size: 8px;
+  color: var(--lcd-dim);
+  text-align: center;
+  animation: blink .7s step-end infinite;
+}
+
+/* ── ZONE ─────────────────────────────────────────────────────────────── */
+.lcd-zone {
+  font-size: 6px;
+  color: var(--lcd-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: -4px;
+}
+
+/* ── CONTEXTE NARRATIF ─────────────────────────────────────────────────── */
+.lcd-contexte {
+  font-family: var(--fn-vt);
+  font-size: 16px;
+  color: #FFEE88;
+  background: #0A0A00;
+  border: 3px solid #000;
+  border-radius: 4px;
+  padding: 6px 9px;
+  line-height: 1.4;
+  text-shadow: 0 0 8px rgba(255,230,0,0.4);
+  box-shadow: inset 0 0 0 2px rgba(255,230,0,0.2), inset 0 0 0 4px #000;
+  display: none;
+}
+.lcd-contexte.visible { display: block; animation: lcd-fadein .4s ease; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ÉCRAN D'INTRO
+═══════════════════════════════════════════════════════════════════════════ */
+#ecran-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  transition: opacity .7s ease;
+}
+#ecran-intro.fade-out { opacity: 0; pointer-events: none; }
+
+.intro-box {
+  background: #0A0A00;
+  border: 4px solid #000;
+  border-radius: 4px;
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    inset 0 0 0 3px var(--off-white),
+    inset 0 0 0 6px #000,
+    0 0 40px rgba(57,255,20,0.2),
+    0 0 80px rgba(57,255,20,0.06);
+  padding: 32px 36px;
+  max-width: 620px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.intro-title {
+  text-align: center;
+  animation: none;
+}
+
+/* ── LOGO SQLEMON lettre par lettre ──────────────────────────────────────── */
+.logo-sqlemon {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 2px;
+  line-height: 1;
+}
+.logo-letter {
+  font-family: var(--fn);
+  font-size: 28px;
+  color: var(--c, #CC0000);
+  display: inline-block;
+  text-shadow:
+    -3px -3px 0 #000,  3px -3px 0 #000,
+    -3px  3px 0 #000,  3px  3px 0 #000,
+    -3px  0   0 #000,  3px  0   0 #000,
+     0   -3px 0 #000,  0    3px 0 #000;
+  animation: letter-bounce 0.55s cubic-bezier(.36,1.56,.64,1) calc(var(--i,0) * 80ms) both;
+}
+@keyframes letter-bounce {
+  0%   { transform: translateY(-36px) scale(0.6); opacity: 0; }
+  70%  { transform: translateY(5px) scale(1.05); opacity: 1; }
+  85%  { transform: translateY(-3px) scale(0.98); }
+  100% { transform: translateY(0) scale(1); }
+}
+.logo-subtitle {
+  font-size: 8px;
+  color: rgba(248,248,248,0.65);
+  text-align: center;
+  letter-spacing: 3px;
+  margin-top: 10px;
+}
+
+@keyframes title-flash {
+  0%,49%  { color: var(--red); text-shadow: 0 3px 0 #550000, 0 0 24px rgba(200,0,0,0.7); }
+  50%,99% { color: var(--yellow); text-shadow: 0 3px 0 #664400, 0 0 24px rgba(255,220,0,0.7); }
+}
+
+/* Étape A – texte Prof. Chen */
+#step-a, #step-b { display: flex; flex-direction: column; gap: 18px; }
+#step-b { display: none; }
+
+.prof-text {
+  font-family: var(--fn-vt);
+  font-size: 18px;
+  color: var(--lcd-mid);
+  line-height: 1.4;
+  min-height: 56px;
+}
+.prof-text .cursor-blink {
+  display: inline-block;
+  width: 10px; height: 18px;
+  background: var(--lcd-on);
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: blink .6s step-end infinite;
+}
+
+.intro-pseudo-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: lcd-fadein .4s ease;
+}
+.intro-pseudo-label {
+  font-size: 7px;
+  color: var(--lcd-dim);
+  letter-spacing: 2px;
+}
+#pseudo-input {
+  font-family: var(--fn);
+  font-size: 9px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--lcd-on);
+  color: var(--lcd-on);
+  outline: none;
+  padding: 5px 0;
+  caret-color: var(--lcd-on);
+  text-shadow: 0 0 8px rgba(57,255,20,0.5);
+  width: 100%;
+}
+
+/* Étape B – choix du starter */
+.starter-prompt {
+  font-family: var(--fn-vt);
+  font-size: 18px;
+  color: var(--lcd-mid);
+  line-height: 1.4;
+}
+
+.starters-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.starter-card {
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 12px 10px;
+  cursor: pointer;
+  background: #0A0A0A;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color .15s, box-shadow .15s, transform .1s;
+}
+.starter-card:hover {
+  transform: translateY(-2px);
+}
+.starter-card.selected {
+  box-shadow: 0 0 18px var(--s-color), 0 0 4px var(--s-color);
+  border-color: var(--s-color);
+}
+
+/* types par carte */
+.starter-card[data-type="Plante"] { --s-color: #33FF66; --s-bg: #001408; }
+.starter-card[data-type="Feu"]    { --s-color: #FF6622; --s-bg: #140500; }
+.starter-card[data-type="Eau"]    { --s-color: #22AAFF; --s-bg: #000A14; }
+.starter-card:hover { background: var(--s-bg); }
+.starter-card.selected { background: var(--s-bg); }
+
+.s-nom {
+  font-size: 8px;
+  color: var(--s-color);
+  text-shadow: 0 0 10px var(--s-color);
+  text-align: center;
+  letter-spacing: 1px;
+}
+.s-type {
+  font-size: 6px;
+  color: var(--lcd-dim);
+  text-align: center;
+}
+.s-stats { display: flex; flex-direction: column; gap: 4px; }
+.s-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.s-stat-name {
+  font-size: 5px;
+  color: var(--lcd-dim);
+  width: 24px;
+  flex-shrink: 0;
+}
+.s-stat-bar-bg {
+  flex: 1;
+  height: 4px;
+  background: #111;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.s-stat-bar {
+  height: 100%;
+  background: var(--s-color);
+  border-radius: 2px;
+  box-shadow: 0 0 4px var(--s-color);
+  transition: width .4s ease;
+}
+.s-stat-val {
+  font-size: 5px;
+  color: var(--lcd-dim);
+  width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Bouton intro */
+.btn-intro {
+  font-family: var(--fn);
+  font-size: 8px;
+  background: linear-gradient(160deg, #002200, #003200);
+  border: 3px solid #000;
+  color: var(--lcd-on);
+  border-radius: 4px;
+  padding: 13px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(57,255,20,0.7);
+  box-shadow:
+    0 5px 0 #000A00,
+    inset 0 0 0 2px rgba(57,255,20,0.3),
+    inset 0 0 0 4px #000,
+    0 0 20px rgba(57,255,20,0.1);
+  transition: transform .07s, box-shadow .07s;
+  align-self: center;
+  min-width: 220px;
+  text-align: center;
+}
+.btn-intro:hover {
+  background: linear-gradient(160deg, #003000, #004800);
+  box-shadow: 0 5px 0 #000A00, inset 0 0 0 2px rgba(57,255,20,0.4), inset 0 0 0 4px #000, 0 0 24px rgba(57,255,20,0.18);
+}
+.btn-intro:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 #000A00, inset 0 0 0 2px rgba(57,255,20,0.2), inset 0 0 0 4px #000;
+}
+.btn-intro:disabled { opacity: .35; cursor: default; }
+
+/* ── MODE CARDS ─────────────────────────────────────────────────────────── */
+.mode-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.mode-card {
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 20px 12px;
+  cursor: pointer;
+  background: #0A0A0A;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  transition: border-color .15s, box-shadow .15s, transform .1s, background .15s;
+}
+.mode-card[data-mode="histoire"] { --m-color: #22AAFF; }
+.mode-card[data-mode="arcade"]   { --m-color: #FF6622; }
+.mode-card[data-mode="doc"]      { --m-color: #FFEE00; }
+.mode-card:hover {
+  background: #0D0D0D;
+  border-color: var(--m-color);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--m-color) 25%, transparent);
+  transform: translateY(-3px);
+}
+.mode-card:active { transform: translateY(0); }
+
+.mode-icon { font-size: 28px; line-height: 1; }
+.mode-nom  {
+  font-size: 9px;
+  color: var(--m-color);
+  text-shadow: 0 0 10px var(--m-color);
+  letter-spacing: 1px;
+}
+.mode-desc {
+  font-family: var(--fn-vt);
+  font-size: 14px;
+  color: var(--lcd-dim);
+  line-height: 1.4;
+}
+.mode-tag {
+  font-size: 5px;
+  color: var(--m-color);
+  border: 1px solid var(--m-color);
+  padding: 2px 8px;
+  border-radius: 2px;
+  letter-spacing: 2px;
+  opacity: 0.65;
+}
+
+/* ── SPRITE SUR CARTE STARTER ───────────────────────────────────────────── */
+.starter-sprite-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+}
+.starter-sprite {
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+  transition: transform .3s ease, filter .3s ease;
+}
+.starter-card:hover .starter-sprite {
+  transform: scale(1.2) translateY(-4px);
+  filter: drop-shadow(0 0 8px var(--s-color));
+}
+.starter-card.selected .starter-sprite {
+  animation: starter-bounce .5s ease infinite alternate;
+  filter: drop-shadow(0 0 12px var(--s-color));
+}
+@keyframes starter-bounce {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-7px); }
+}
+
+/* Pseudo badge affiché dans le Pokédex */
+#dresseur-badge {
+  font-size: 6px;
+  color: var(--lcd-dim);
+  letter-spacing: 1px;
+  text-align: right;
+  display: none;
+}
+#dresseur-badge span { color: var(--lcd-on); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SPRITE PANEL
+══════════════════════════════════════════════════════════════════════════ */
+.screen-sprite-frame {
+  background: #222;
+  border-radius: 6px;
+  padding: 5px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.7);
+  display: none; /* caché si pas de pokemon_id */
+}
+.screen-sprite-frame.visible { display: block; }
+
+.screen-sprite {
+  background: linear-gradient(to bottom, #020E02 0%, var(--lcd-bg) 100%);
+  border-radius: 3px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+  min-height: 76px;
+}
+/* Arena floor gradient */
+.screen-sprite::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 20px;
+  background: linear-gradient(to top, rgba(57,255,20,0.04), transparent);
+  pointer-events: none;
+}
+
+.sprite-col {
+  position: relative;
+  width: 64px;
+  height: 80px;  /* extra height for shadow */
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+/* Ellipse arena shadow */
+.sprite-col::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 7px;
+  background: radial-gradient(ellipse, rgba(57,255,20,0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.sprite-img {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+  display: block;
+  transition: filter .15s;
+  flex-shrink: 0;
+}
+.sprite-img.silhouette {
+  filter: brightness(0) opacity(0.7);
+  animation: sprite-sway 3s ease-in-out infinite;
+}
+.sprite-img.revealed   { filter: brightness(1); animation: sprite-reveal .7s ease; }
+@keyframes sprite-sway {
+  0%,100% { transform: translateY(0) rotate(-0.8deg); }
+  25%     { transform: translateY(-4px) rotate(0.4deg); }
+  75%     { transform: translateY(-2px) rotate(-0.4deg); }
+}
+
+.sprite-q-mark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--lcd-dim);
+  text-shadow: 0 0 12px var(--lcd-dim);
+  pointer-events: none;
+  transition: opacity .3s;
+}
+.sprite-q-mark.hidden { opacity: 0; }
+
+.sprite-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sprite-label {
+  font-size: 5px;
+  color: var(--lcd-dim);
+  letter-spacing: 2px;
+}
+.sprite-nom {
+  font-size: 8px;
+  color: var(--lcd-dim);
+  letter-spacing: 1px;
+  transition: color .4s, text-shadow .4s;
+}
+.sprite-nom.revealed {
+  color: var(--lcd-on);
+  text-shadow: 0 0 10px rgba(57,255,20,0.6);
+}
+.sprite-type {
+  font-size: 6px;
+  color: var(--lcd-off);
+  letter-spacing: 1px;
+  transition: color .4s;
+}
+.sprite-type.revealed { color: var(--lcd-dim); }
+
+@keyframes sprite-reveal {
+  0%   { filter: brightness(0) opacity(0.7); }
+  30%  { filter: brightness(4) saturate(0) opacity(1); }
+  60%  { filter: brightness(1.5) saturate(1.2); }
+  100% { filter: brightness(1); }
+}
+@keyframes sprite-flash-border {
+  0%,100% { box-shadow: inset 0 0 0px transparent; }
+  40%     { box-shadow: inset 0 0 20px rgba(57,255,20,0.4); }
+}
+.screen-sprite.flash { animation: sprite-flash-border .8s ease; }
+
+/* ── BOUTON QUÊTE SUIVANTE ─────────────────────────────────────────────── */
+.btn-next-quest {
+  display: none;
+  width: 100%;
+  font-family: var(--fn);
+  font-size: 8px;
+  color: #FFFFFF;
+  background: linear-gradient(to bottom, #004400, #002800);
+  border: 2px solid var(--lcd-on);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(57,255,20,0.6);
+  box-shadow:
+    0 5px 0 #001400,
+    0 0 20px rgba(57,255,20,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+  transition: transform .07s, box-shadow .07s, background .1s;
+  animation: lcd-fadein .3s ease;
+}
+.btn-next-quest.visible { display: block; }
+.btn-next-quest:hover { background: linear-gradient(to bottom, #005500, #003800); }
+.btn-next-quest:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 #001400, inset 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BARRE DE PROGRESSION – BADGES D'ARÈNE
+══════════════════════════════════════════════════════════════════════════ */
+.act-bar {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  gap: 6px;
+  background: #050000;
+  border: 4px solid #000;
+  border-radius: 4px;
+  padding: 8px 10px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: inset 0 0 0 2px rgba(248,248,248,0.06), inset 0 0 0 4px #000;
+}
+
+.act-seg {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: transform .12s;
+}
+.act-seg:hover { transform: translateY(-2px); }
+
+/* Badge shape: octagonal via clip-path */
+.act-seg-badge {
+  width: 36px;
+  height: 36px;
+  clip-path: polygon(30% 0%,70% 0%,100% 30%,100% 70%,70% 100%,30% 100%,0% 70%,0% 30%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--fn);
+  font-size: 7px;
+  transition: background .2s, box-shadow .2s;
+}
+
+.act-seg-label {
+  font-size: 5px;
+  letter-spacing: 0;
+  text-align: center;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* États – couleur de ville via CSS var(--act-color) injecté par JS */
+.act-seg.as-locked .act-seg-badge {
+  background: var(--act-color, #333);
+  color: rgba(255,255,255,0.6);
+  opacity: 0.38;
+  filter: grayscale(1);
+}
+.act-seg.as-locked .act-seg-label { color: rgba(255,255,255,0.3); }
+
+.act-seg.as-done .act-seg-badge {
+  background: var(--act-color, #FFD700);
+  color: #fff;
+  opacity: 1;
+  filter: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  animation: badge-done-glow 2.5s ease-in-out infinite;
+}
+.act-seg.as-done .act-seg-label { color: rgba(255,255,255,0.75); }
+
+.act-seg.as-current .act-seg-badge {
+  background: var(--act-color, #CC0000);
+  color: #fff;
+  opacity: 1;
+  filter: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  animation: badge-current-pulse 1.0s ease-in-out infinite;
+}
+.act-seg.as-current .act-seg-label { color: #fff; }
+
+@keyframes badge-done-glow {
+  0%,100% { filter: none; }
+  50%     { filter: brightness(1.25); }
+}
+@keyframes badge-current-pulse {
+  0%,100% { outline-color: rgba(255,255,255,0.6); }
+  50%     { outline-color: rgba(255,255,255,1); box-shadow: 0 0 14px rgba(255,255,255,0.45); }
+}
+
+/* ── SCORE COUNTER ─────────────────────────────────────────────────────── */
+.score-line {
+  font-size: 6px;
+  color: var(--lcd-dim);
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+}
+.score-ok   { color: var(--lcd-on); }
+.score-fail { color: #FF4422; }
+
+/* ── STARTER BADGE ────────────────────────────────────────────────────── */
+#dresseur-badge {
+  font-size: 5px !important;
+  line-height: 1.9;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   POPUP TRANSITION ENTRE ACTES
+══════════════════════════════════════════════════════════════════════════ */
+#transition-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0,0,0,0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: lcd-fadein .35s ease;
+}
+#transition-popup.hidden { display: none; }
+
+.tr-box {
+  background: #050A05;
+  border: 4px solid #000;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 3px var(--off-white),
+    inset 0 0 0 6px #000,
+    0 0 60px rgba(57,255,20,0.2);
+  padding: 36px 44px;
+  max-width: 560px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+.tr-badge {
+  font-size: 7px;
+  color: var(--lcd-dim);
+  letter-spacing: 3px;
+  border: 1px solid var(--lcd-dim);
+  padding: 4px 12px;
+  border-radius: 3px;
+}
+.tr-titre {
+  font-size: 13px;
+  color: var(--lcd-on);
+  text-shadow: 0 0 24px rgba(57,255,20,0.8);
+  text-align: center;
+  line-height: 1.7;
+  animation: lcd-fadein .6s ease .1s both;
+}
+.tr-text {
+  font-family: var(--fn-vt);
+  font-size: 18px;
+  color: var(--lcd-mid);
+  line-height: 1.5;
+  text-align: center;
+  max-width: 420px;
+  animation: lcd-fadein .6s ease .4s both;
+}
+.tr-score {
+  font-size: 6px;
+  color: var(--lcd-dim);
+  letter-spacing: 2px;
+}
+.tr-score span { color: var(--lcd-on); }
+.btn-tr-continuer {
+  font-family: var(--fn);
+  font-size: 8px;
+  background: transparent;
+  border: 2px solid var(--lcd-on);
+  color: var(--lcd-on);
+  border-radius: 5px;
+  padding: 12px 28px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(57,255,20,0.5);
+  box-shadow: 0 0 20px rgba(57,255,20,0.1);
+  animation: lcd-fadein .4s ease .8s both;
+  transition: background .1s, box-shadow .1s;
+}
+.btn-tr-continuer:hover {
+  background: rgba(57,255,20,0.08);
+  box-shadow: 0 0 30px rgba(57,255,20,0.25);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ÉCRAN DE FIN
+══════════════════════════════════════════════════════════════════════════ */
+#ecran-fin {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: lcd-fadein .8s ease;
+}
+#ecran-fin.hidden { display: none; }
+
+.fin-box {
+  background: #03000A;
+  border: 4px solid #000;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 3px var(--yellow),
+    inset 0 0 0 6px #000,
+    0 0 60px rgba(255,220,0,0.25),
+    0 0 120px rgba(255,220,0,0.08);
+  padding: 44px 52px;
+  max-width: 600px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+.fin-trophy {
+  font-size: 36px;
+  animation: pulse-trophy 1.5s ease infinite;
+  line-height: 1;
+}
+@keyframes pulse-trophy {
+  0%,100% { text-shadow: 0 0 20px rgba(255,220,0,0.6); transform: scale(1); }
+  50%      { text-shadow: 0 0 40px rgba(255,220,0,0.9); transform: scale(1.08); }
+}
+.fin-titre {
+  font-size: 10px;
+  color: #FFEE00;
+  text-shadow: 0 0 20px rgba(255,220,0,0.7);
+  text-align: center;
+  line-height: 1.8;
+  letter-spacing: 2px;
+}
+.fin-sous-titre {
+  font-size: 7px;
+  color: #BBAA44;
+  letter-spacing: 2px;
+  text-align: center;
+}
+.fin-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+}
+.fin-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #221800;
+  padding-bottom: 7px;
+  font-size: 7px;
+}
+.fin-stat-label { color: #665522; letter-spacing: 1px; }
+.fin-stat-val   { color: #FFEE00; text-shadow: 0 0 8px rgba(255,220,0,0.5); }
+.fin-bar-wrap {
+  width: 100%;
+  max-width: 360px;
+  height: 6px;
+  background: #110D00;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.fin-bar {
+  height: 100%;
+  background: linear-gradient(to right, #FFEE00, #FF9900);
+  border-radius: 3px;
+  transition: width 1.2s ease .5s;
+}
+.btn-rejouer {
+  font-family: var(--fn);
+  font-size: 8px;
+  background: linear-gradient(to bottom, #332200, #221400);
+  border: 2px solid #FFEE00;
+  color: #FFEE00;
+  border-radius: 6px;
+  padding: 13px 32px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(255,220,0,0.5);
+  box-shadow: 0 4px 0 #110D00, 0 0 20px rgba(255,220,0,0.15);
+  transition: transform .07s, box-shadow .07s;
+  margin-top: 8px;
+}
+.btn-rejouer:hover { background: linear-gradient(to bottom, #443300, #332200); }
+.btn-rejouer:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #110D00;
+}
+
+/* ── BARRE ARCADE ──────────────────────────────────────────────────────── */
+#arcade-bar {
+  width: 100%;
+  max-width: 960px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: #000A08;
+  border: 2px solid #005533;
+  border-radius: 6px;
+  padding: 7px 12px;
+  flex-wrap: wrap;
+}
+#arcade-bar.visible { display: flex; }
+
+.arcade-section {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 6px;
+  color: var(--lcd-dim);
+  letter-spacing: 1px;
+}
+.arcade-section-label {
+  font-size: 5px;
+  color: #003322;
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+/* Difficulty buttons */
+.diff-btn {
+  font-family: var(--fn);
+  font-size: 6px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid #003322;
+  background: #000D0A;
+  color: #005533;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all .1s;
+}
+.diff-btn:hover { background: #001A0F; border-color: #006644; color: #008855; }
+.diff-btn.active {
+  background: #002211;
+  border-color: var(--lcd-on);
+  color: var(--lcd-on);
+  text-shadow: 0 0 8px rgba(57,255,20,0.5);
+  box-shadow: 0 0 8px rgba(57,255,20,0.15);
+}
+
+/* Arcade score / streak */
+.arcade-score-text {
+  font-size: 6px;
+  color: #00AA66;
+  white-space: nowrap;
+}
+.arcade-score-text b { color: var(--lcd-on); font-weight: normal; }
+
+.arcade-streak-text {
+  font-size: 7px;
+  color: #FFAA00;
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(255,160,0,0.5);
+}
+.arcade-streak-text b { font-weight: normal; }
+
+/* Séparateur */
+.arcade-sep {
+  width: 1px;
+  height: 18px;
+  background: #003322;
+  flex-shrink: 0;
+}
+
+/* ── BOUTON PASSER (arcade only) ───────────────────────────────────────── */
+.btn-passer {
+  display: none;
+  font-family: var(--fn);
+  font-size: 6px;
+  color: #AAAAAA;
+  background: linear-gradient(to bottom, #222, #111);
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 9px 4px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  box-shadow: 0 3px 0 #000, inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: transform .07s, box-shadow .07s;
+}
+.btn-passer:hover { background: linear-gradient(to bottom, #333, #222); }
+.btn-passer:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+.btn-passer.visible { display: block; }
+
+/* ── AMÉLIORATION FEEDBACK ERREUR SQL ──────────────────────────────────── */
+.feedback.sql-err {
+  color: #FF6600;
+  background: #1A0800;
+  border: 2px solid #993300;
+  font-size: 7px;
+}
+.sql-error-msg {
+  font-size: 7px;
+  color: #FF6600;
+  background: #1A0800;
+  border: 2px solid #993300;
+  border-radius: 4px;
+  padding: 8px 10px;
+  line-height: 2;
+  animation: lcd-fadein .3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sql-error-label {
+  font-size: 6px;
+  color: #FF4400;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #993300;
+  padding-bottom: 5px;
+  margin-bottom: 2px;
+}
+.sql-error-detail {
+  font-size: 6px;
+  color: #FFAA66;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ÉCRAN DOCUMENTATION
+══════════════════════════════════════════════════════════════════════════ */
+#ecran-doc {
+  position: fixed; inset: 0; z-index: 200;
+  background: #030603;
+  overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 20px 16px; gap: 14px;
+}
+#ecran-doc.hidden { display: none; }
+
+.doc-header {
+  width: 100%; max-width: 900px;
+  display: flex; align-items: center; gap: 12px;
+}
+.btn-doc-retour {
+  font-family: var(--fn); font-size: 7px;
+  background: transparent; border: 1px solid var(--lcd-dim);
+  color: var(--lcd-dim); border-radius: 4px; padding: 6px 10px;
+  cursor: pointer; letter-spacing: 1px; flex-shrink: 0;
+  transition: border-color .1s, color .1s;
+}
+.btn-doc-retour:hover { border-color: var(--lcd-on); color: var(--lcd-on); }
+
+.doc-title {
+  font-size: 9px; color: var(--lcd-on);
+  text-shadow: 0 0 14px rgba(57,255,20,0.6);
+  letter-spacing: 2px; flex: 1; text-align: center;
+}
+
+.doc-box {
+  width: 100%; max-width: 900px;
+  background: #050A05;
+  border: 4px solid #000;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 2px rgba(248,248,248,0.08),
+    inset 0 0 0 4px #000,
+    0 0 40px rgba(57,255,20,0.08);
+}
+
+.doc-tabs {
+  display: flex; border-bottom: 1px solid var(--lcd-dim);
+  background: var(--lcd-off);
+}
+.doc-tab {
+  font-family: var(--fn); font-size: 7px;
+  background: transparent; border: none;
+  border-right: 1px solid #0A180A;
+  color: var(--lcd-dim); padding: 10px 16px;
+  cursor: pointer; letter-spacing: 1px;
+  transition: color .1s, background .1s;
+}
+.doc-tab:hover { color: var(--lcd-mid); background: #060E06; }
+.doc-tab.active {
+  color: var(--lcd-on); background: #050A05;
+  text-shadow: 0 0 8px rgba(57,255,20,0.5);
+  border-bottom: 2px solid var(--lcd-on);
+}
+
+.doc-section { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.doc-section.hidden { display: none; }
+
+/* ── Référence SQL ── */
+.doc-ref-grid { display: flex; flex-direction: column; gap: 5px; }
+
+.topic-card { border: 1px solid #0A180A; border-radius: 4px; overflow: hidden; }
+.topic-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; cursor: pointer;
+  background: var(--lcd-off); transition: background .1s;
+  user-select: none;
+}
+.topic-header:hover { background: #060E06; }
+.topic-card.expanded .topic-header { background: #061206; border-bottom: 1px solid #0A180A; }
+
+.topic-cat {
+  font-size: 5px; letter-spacing: 2px;
+  padding: 2px 5px; border-radius: 2px; flex-shrink: 0;
+}
+.topic-cat[data-cat="BASES"]    { color: #22AAFF; border: 1px solid #22AAFF; }
+.topic-cat[data-cat="FILTRAGE"] { color: #FF8844; border: 1px solid #FF8844; }
+.topic-cat[data-cat="TRI"]      { color: #AA44FF; border: 1px solid #AA44FF; }
+.topic-cat[data-cat="AGRÉGATS"] { color: #FFEE00; border: 1px solid #FFEE00; }
+.topic-cat[data-cat="JOIN"]     { color: #FF4466; border: 1px solid #FF4466; }
+.topic-cat[data-cat="AVANCÉ"]   { color: #44FFCC; border: 1px solid #44FFCC; }
+
+.topic-nom { font-size: 8px; color: var(--lcd-on); flex: 1; letter-spacing: 1px; }
+.topic-arrow {
+  font-size: 8px; color: var(--lcd-dim);
+  transition: transform .2s; display: inline-block;
+}
+.topic-card.expanded .topic-arrow { transform: rotate(90deg); }
+
+.topic-body {
+  display: none; padding: 10px 12px;
+  gap: 7px; flex-direction: column; background: #030803;
+}
+.topic-card.expanded .topic-body { display: flex; }
+
+.topic-desc { font-family: var(--fn-vt); font-size: 16px; color: var(--lcd-mid); line-height: 1.4; }
+.topic-code-label {
+  font-size: 5px; color: var(--lcd-dim);
+  letter-spacing: 2px; margin-top: 2px;
+}
+.topic-code {
+  background: #000; border: 1px solid #0A180A; border-radius: 3px;
+  padding: 7px 10px; font-family: var(--fn); font-size: 6px;
+  color: #AAFF88; white-space: pre; line-height: 2;
+  overflow-x: auto;
+  scrollbar-width: thin; scrollbar-color: var(--lcd-dim) transparent;
+}
+.topic-code.exemple {
+  color: var(--lcd-on); cursor: pointer;
+  transition: border-color .1s, background .1s;
+}
+.topic-code.exemple:hover { border-color: var(--lcd-dim); background: #010E01; }
+
+.btn-essayer {
+  font-family: var(--fn); font-size: 6px;
+  background: transparent; border: 1px solid var(--lcd-dim);
+  color: var(--lcd-dim); border-radius: 3px; padding: 5px 10px;
+  cursor: pointer; letter-spacing: 1px; align-self: flex-start;
+  transition: all .1s;
+}
+.btn-essayer:hover {
+  border-color: var(--lcd-on); color: var(--lcd-on);
+  text-shadow: 0 0 8px rgba(57,255,20,0.5);
+}
+
+/* ── Schéma DB ── */
+.schema-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+  gap: 10px;
+}
+.schema-table-card { border-radius: 5px; overflow: hidden; border: 1px solid #0A180A; }
+.schema-table-header {
+  padding: 7px 10px; font-size: 7px; letter-spacing: 1px;
+}
+.schema-table-cols { background: #030803; padding: 5px 0; }
+.schema-col-row {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 10px; font-size: 6px;
+}
+.schema-col-name { color: var(--lcd-mid); flex: 1; }
+.schema-col-name.pk { color: var(--lcd-on); font-size: 7px; }
+.schema-col-type { color: var(--lcd-dim); font-size: 5px; }
+.schema-col-badge {
+  font-size: 5px; padding: 1px 4px; border-radius: 2px; flex-shrink: 0;
+}
+.schema-col-badge.pk   { color: #FFEE00; border: 1px solid #554400; }
+.schema-col-badge.fk   { color: #FF8844; border: 1px solid #553300; }
+.schema-col-badge.null { color: var(--lcd-dim); border: 1px solid #0A180A; }
+.schema-rel-note {
+  font-size: 5px; color: var(--lcd-dim);
+  padding: 5px 10px; background: #020602;
+  border-top: 1px solid #0A180A; line-height: 2;
+}
+.schema-rel-note span { color: #FF8844; }
+
+/* ── Bac à sable ── */
+.doc-sandbox {
+  border-top: 1px solid var(--lcd-dim);
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+  background: #020602;
+}
+.doc-sandbox-label { font-size: 7px; color: var(--lcd-dim); }
+#doc-requete {
+  width: 100%; min-height: 70px;
+  background: var(--lcd-bg); border: 1px solid var(--lcd-dim);
+  border-radius: 4px; color: var(--lcd-on);
+  font-family: var(--fn); font-size: 7px; line-height: 2;
+  padding: 8px; resize: vertical; outline: none;
+  caret-color: var(--lcd-on); text-shadow: 0 0 6px rgba(57,255,20,0.4);
+}
+#doc-requete::placeholder { color: var(--lcd-dim); }
+#doc-requete:focus { border-color: var(--lcd-mid); }
+.doc-sandbox-btns { display: flex; gap: 8px; }
+.btn-doc-exec {
+  font-family: var(--fn); font-size: 7px;
+  background: linear-gradient(to bottom, #004400, #002800);
+  border: 2px solid var(--lcd-on); color: var(--lcd-on);
+  border-radius: 5px; padding: 9px 18px; cursor: pointer;
+  letter-spacing: 1px; text-shadow: 0 0 8px rgba(57,255,20,0.5);
+  transition: transform .07s, background .1s;
+  box-shadow: 0 3px 0 #001400;
+}
+.btn-doc-exec:hover { background: linear-gradient(to bottom, #005500, #003800); }
+.btn-doc-exec:active { transform: translateY(2px); box-shadow: 0 1px 0 #001400; }
+.btn-doc-exec:disabled { opacity: .4; cursor: default; }
+.btn-doc-clear {
+  font-family: var(--fn); font-size: 7px;
+  background: transparent; border: 1px solid #333;
+  color: #777; border-radius: 5px; padding: 9px 14px;
+  cursor: pointer; letter-spacing: 1px; transition: all .1s;
+}
+.btn-doc-clear:hover { border-color: #888; color: #AAA; }
+#doc-feedback {
+  font-size: 7px; line-height: 2;
+  display: none;
+}
+#doc-feedback.vis { display: block; animation: lcd-fadein .3s ease; }
+#doc-feedback.ok  { color: var(--lcd-on); }
+#doc-feedback.err { color: #FF6622; }
+#doc-results {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 220px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--lcd-dim) transparent;
+}
+#doc-results::-webkit-scrollbar { width: 3px; }
+#doc-results::-webkit-scrollbar-thumb { background: var(--lcd-dim); }
+
+/* ── RESPONSIVE ───────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .pokedex { flex-direction: column; min-height: unset; }
+  .half-left  { flex: none; border-radius: 22px 22px 0 0; }
+  .hinge      {
+    width: 100%; height: 16px; flex-direction: row;
+    border: none;
+    border-top: 2px solid var(--red-edge);
+    border-bottom: 2px solid var(--red-edge);
+    padding: 0 40px;
+  }
+  .half-right { border-radius: 0 0 22px 22px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   POKÉBALL DÉCORATIVE
+══════════════════════════════════════════════════════════════════════════ */
+#pokeball-wrap {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+#pokeball-outer {
+  width: 50px; height: 50px;
+  cursor: pointer;
+  transition: transform .15s;
+}
+#pokeball-outer:hover { transform: scale(1.18); }
+#pokeball-outer:hover #pokeball { animation-duration: 0.35s; }
+
+#pokeball {
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  border: 4px solid #000;
+  /* Red top, black band, white bottom */
+  background:
+    radial-gradient(circle at 50% 50%, transparent 19%, #000 19%, #000 24%, transparent 24%),
+    linear-gradient(to bottom, #CC0000 0%, #CC0000 48%, #F8F8F8 48%);
+  position: relative;
+  animation: pokeball-spin 8s linear infinite;
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.15),
+    0 4px 14px rgba(0,0,0,0.7);
+}
+/* Center button */
+#pokeball::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #fff, #ccc);
+  border: 3px solid #000;
+  z-index: 2;
+}
+
+@keyframes pokeball-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Aide rapide */
+#pokeball-help {
+  background: #050A05;
+  border: 4px solid #000;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 2px rgba(248,248,248,0.1),
+    inset 0 0 0 4px #000,
+    0 4px 20px rgba(0,0,0,0.7);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 230px;
+  animation: lcd-fadein .2s ease;
+}
+#pokeball-help.hidden { display: none; }
+.help-title {
+  font-size: 7px;
+  color: var(--lcd-dim);
+  letter-spacing: 2px;
+  border-bottom: 1px solid #0A180A;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+.help-item {
+  font-family: var(--fn-vt);
+  font-size: 15px;
+  color: var(--lcd-mid);
+  line-height: 1.3;
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.help-key {
+  font-family: var(--fn);
+  font-size: 5px;
+  color: var(--lcd-on);
+  border: 1px solid var(--lcd-dim);
+  padding: 1px 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── BOUTON SON ───────────────────────────────────────────────────────── */
+#sound-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 90;
+  background: rgba(5,5,5,0.85);
+  border: 2px solid #333;
+  border-radius: 4px;
+  color: #888;
+  font-size: 14px;
+  width: 34px; height: 34px;
+  cursor: pointer;
+  transition: border-color .1s, background .1s;
+  display: flex; align-items: center; justify-content: center;
+}
+#sound-btn:hover { border-color: #666; background: rgba(20,20,20,0.9); }
+</style>
+</head>
+<body>
+
+<!-- Couches de fond (backgrounds par acte) -->
+<div id="bg-a" class="bg-layer active"></div>
+<div id="bg-b" class="bg-layer"></div>
+<div class="bg-overlay"></div>
+
+<!-- Bouton son (toujours visible) -->
+<button id="sound-btn" title="Son" onclick="toggleSound()">🔊</button>
+
+<!-- Pokéball aide rapide -->
+<div id="pokeball-wrap">
+  <div id="pokeball-help" class="hidden">
+    <div class="help-title">AIDE RAPIDE</div>
+    <div class="help-item"><span class="help-key">💡 INDICE</span> Voir l'indice de la quête</div>
+    <div class="help-item"><span class="help-key">✕ RESET</span> Effacer la requête SQL</div>
+    <div class="help-item"><span class="help-key">↷ PASSER</span> Question suivante (arcade)</div>
+    <div class="help-item"><span class="help-key">Ctrl+↵</span> Valider la requête</div>
+    <div class="help-item"><span class="help-key">◀ ▶</span> Naviguer entre quêtes</div>
+  </div>
+  <div id="pokeball-outer" onclick="toggleHelp()" title="Aide">
+    <div id="pokeball"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ ÉCRAN D'INTRO ═══════════════ -->
+<div id="ecran-intro">
+  <div class="intro-box">
+    <div class="intro-title">
+      <div class="logo-sqlemon">
+        <span class="logo-letter" style="--i:0;--c:#CC0000">S</span>
+        <span class="logo-letter" style="--i:1;--c:#FFDE00">Q</span>
+        <span class="logo-letter" style="--i:2;--c:#CC0000">L</span>
+        <span class="logo-letter" style="--i:3;--c:#FFDE00">E</span>
+        <span class="logo-letter" style="--i:4;--c:#CC0000">M</span>
+        <span class="logo-letter" style="--i:5;--c:#FFDE00">O</span>
+        <span class="logo-letter" style="--i:6;--c:#CC0000">N</span>
+      </div>
+      <div class="logo-subtitle">— Génération SQL —</div>
+    </div>
+
+    <!-- Étape A : texte + pseudo -->
+    <div id="step-a">
+      <div class="prof-text" id="prof-text"></div>
+
+      <div class="intro-pseudo-wrap" id="pseudo-wrap" style="display:none">
+        <div class="intro-pseudo-label">&gt; DRESSEUR:</div>
+        <input id="pseudo-input" type="text" maxlength="20" autocomplete="off" placeholder="TON NOM…">
+      </div>
+
+      <button class="btn-intro" id="btn-commencer" style="display:none" onclick="allerEtapeMode()">
+        ▶ CHOISIR MON MODE
+      </button>
+    </div>
+
+    <!-- Étape Mode : sélection du mode -->
+    <div id="step-mode" style="display:none;flex-direction:column;gap:18px">
+      <div class="starter-prompt">&gt; CHOISIS TON MODE DE JEU :</div>
+      <div class="mode-cards-grid">
+        <div class="mode-card" data-mode="histoire" onclick="allerEtapeB('histoire')">
+          <div class="mode-icon">📖</div>
+          <div class="mode-nom">MODE HISTOIRE</div>
+          <div class="mode-desc">35 quêtes progressives<br>à travers Kanto.<br>9 actes narratifs.</div>
+          <div class="mode-tag">PROGRESSIF</div>
+        </div>
+        <div class="mode-card" data-mode="arcade" onclick="allerEtapeB('arcade')">
+          <div class="mode-icon">⚡</div>
+          <div class="mode-nom">MODE ARCADE</div>
+          <div class="mode-desc">Défis SQL aléatoires<br>à l'infini.<br>Bats ton record !</div>
+          <div class="mode-tag">INFINI</div>
+        </div>
+        <div class="mode-card" data-mode="doc" onclick="allerDocumentation()">
+          <div class="mode-icon">📚</div>
+          <div class="mode-nom">DOC SQL</div>
+          <div class="mode-desc">Référence SQL complète<br>Schéma de la base.<br>Bac à sable libre.</div>
+          <div class="mode-tag">RÉFÉRENCE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape B : choix du starter -->
+    <div id="step-b">
+      <div class="starter-prompt">&gt; CHOISIS TON PARTENAIRE DE DÉPART :</div>
+      <div class="starters-grid" id="starters-grid">
+        <div style="font-size:7px;color:var(--lcd-dim);grid-column:1/-1">CHARGEMENT…</div>
+      </div>
+      <button class="btn-intro" id="btn-confirmer" disabled onclick="commencerAventure()">
+        ▶ COMMENCER L'AVENTURE
+      </button>
+    </div>
+  </div>
+</div>
+<!-- /ÉCRAN D'INTRO -->
+
+<div class="page-title">⚡ SQLEMON</div>
+
+<div id="game-content" style="display:none;width:100%;flex-direction:column;align-items:center;gap:14px">
+
+<!-- Barre de progression par acte (mode histoire) -->
+<div class="act-bar" id="act-bar"></div>
+
+<!-- Barre arcade (mode arcade) -->
+<div id="arcade-bar">
+  <div class="arcade-section">
+    <span class="arcade-section-label">NIVEAU</span>
+    <button class="diff-btn active" data-niveau="0" onclick="setNiveau(0)">ALÉA</button>
+    <button class="diff-btn"        data-niveau="1" onclick="setNiveau(1)">1</button>
+    <button class="diff-btn"        data-niveau="2" onclick="setNiveau(2)">2</button>
+    <button class="diff-btn"        data-niveau="3" onclick="setNiveau(3)">3</button>
+    <button class="diff-btn"        data-niveau="4" onclick="setNiveau(4)">4</button>
+  </div>
+  <div class="arcade-sep"></div>
+  <div class="arcade-section">
+    <span class="arcade-score-text">
+      <b id="arc-ok-bar">0</b> réussies /
+      <b id="arc-tried-bar">0</b> tentées
+      (<b id="arc-pct-bar">–</b>)
+    </span>
+  </div>
+  <div class="arcade-sep"></div>
+  <div class="arcade-section">
+    <span class="arcade-streak-text">🔥 Streak : <b id="arc-streak-bar">0</b></span>
+  </div>
+</div>
+
+<div class="pokedex">
+
+  <!-- ═══════════ MOITIÉ GAUCHE ═══════════ -->
+  <div class="half-left">
+
+    <!-- LEDs -->
+    <div class="leds">
+      <div class="led led-blue"></div>
+      <div class="led led-yellow"></div>
+      <div class="led led-red-dot"></div>
+      <span class="led-label">POKÉDEX</span>
+    </div>
+
+    <!-- Grand écran principal -->
+    <div class="screen-frame" style="flex:1">
+      <div class="screen-main" id="main-screen">
+
+        <div class="lcd-header">
+          <div class="lcd-quest-num" id="lcd-header-histoire">ACTE <b id="q-acte">1</b> · <b id="q-num">01</b>/35</div>
+          <div class="lcd-quest-num" id="lcd-header-arcade" style="display:none">ARCADE · DÉFI <b id="q-num-arc">01</b></div>
+          <div id="dresseur-badge" style="display:none">
+            DRESSEUR&nbsp;<span id="db-pseudo"></span><br>
+            STARTER&nbsp;&nbsp;<span id="db-starter" style="color:#FFCC66"></span>
+          </div>
+        </div>
+        <div class="lcd-zone" id="q-zone"></div>
+
+        <div class="lcd-contexte" id="q-contexte"></div>
+        <div class="lcd-quest-titre" id="q-titre">CHARGEMENT…</div>
+        <div class="lcd-desc" id="q-desc"></div>
+        <div class="lcd-indice" id="q-indice"></div>
+
+      </div>
+    </div>
+
+    <!-- Écran sprite -->
+    <div class="screen-sprite-frame" id="sprite-frame">
+      <div class="screen-sprite" id="sprite-screen">
+        <div class="sprite-col">
+          <img class="sprite-img silhouette" id="sprite-img" src="" alt="">
+          <div class="sprite-q-mark" id="sprite-qmark">?</div>
+        </div>
+        <div class="sprite-info">
+          <div class="sprite-label">CIBLE DÉTECTÉE</div>
+          <div class="sprite-nom" id="sprite-nom">??????</div>
+          <div class="sprite-type" id="sprite-type"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Petit écran bas-gauche -->
+    <div class="screen-small-frame">
+      <div class="screen-small">
+        <div class="score-line" id="score-histoire">
+          <div>QUÊTE <span id="ss-num" style="color:var(--lcd-on)">01</span>/35</div>
+          <div><span class="score-ok" id="sc-ok">0</span> OK · <span class="score-fail" id="sc-fail">0</span> FAIL</div>
+        </div>
+        <div class="score-line" id="score-arcade" style="display:none">
+          <div>DÉFI <span id="ss-defi" style="color:var(--lcd-on)">01</span></div>
+          <div><span class="score-ok" id="sc-arc-ok">0</span> OK · SÉRIE <span style="color:#FFAA00" id="sc-streak">0</span></div>
+        </div>
+        <div class="prog-pips" id="prog-pips"></div>
+      </div>
+    </div>
+
+  </div><!-- /half-left -->
+
+  <!-- ═══════════ CHARNIÈRE ═══════════ -->
+  <div class="hinge">
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+    <div class="screw"></div>
+  </div>
+
+  <!-- ═══════════ MOITIÉ DROITE ═══════════ -->
+  <div class="half-right">
+
+    <!-- Écran SQL -->
+    <div class="screen-sql-frame">
+      <div class="screen-sql-inner">
+        <div class="sql-cursor-line">&gt; SQL INPUT_</div>
+        <textarea id="requete" spellcheck="false" placeholder="SELECT …"></textarea>
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="feedback" id="feedback"></div>
+
+    <!-- Boutons -->
+    <div class="btns">
+      <button class="btn" onclick="toggleIndice()">💡 INDICE</button>
+      <button class="btn" onclick="effacer()">✕ RESET</button>
+      <button class="btn" id="btn-prev" onclick="naviguer(-1)">◀ PRÉC</button>
+      <button class="btn" id="btn-next" onclick="naviguer(+1)">SUIV ▶</button>
+      <button class="btn btn-valider" id="btn-val" onclick="valider()">▶ VALIDER</button>
+      <button class="btn btn-passer"  id="btn-passer" onclick="passerQuestion()">↷ PASSER</button>
+    </div>
+
+    <!-- Bouton quête suivante (apparaît après succès) -->
+    <button class="btn-next-quest" id="btn-next-quest" onclick="nextQuest()">
+      QUÊTE SUIVANTE ▶
+    </button>
+
+    <!-- Résultats -->
+    <div class="results-zone" id="results-zone"></div>
+
+  </div><!-- /half-right -->
+
+</div><!-- /pokedex -->
+</div><!-- /game-content -->
+
+<!-- ═══════════════ POPUP TRANSITION ACTE ═══════════════ -->
+<div id="transition-popup" class="hidden">
+  <div class="tr-box">
+    <div class="tr-badge" id="tr-badge">ACTE 1 TERMINÉ</div>
+    <div class="tr-titre" id="tr-titre">BOURG PALETTE<br>COMPLÉTÉ !</div>
+    <div class="tr-text" id="tr-text"></div>
+    <div class="tr-score">SCORE&nbsp;<span id="tr-score-val">0</span>/35</div>
+    <button class="btn-tr-continuer" onclick="fermerTransition()">▶ CONTINUER</button>
+  </div>
+</div>
+
+<!-- ═══════════════ ÉCRAN DE FIN ═══════════════ -->
+<div id="ecran-fin" class="hidden">
+  <div class="fin-box">
+    <div class="fin-trophy">🏆</div>
+    <div class="fin-titre">TU AS VAINCU<br>LA LIGUE POKÉMON !</div>
+    <div class="fin-sous-titre">KANTO EST SAUVÉ, DRESSEUR <span id="fin-pseudo"></span></div>
+    <div class="fin-stats">
+      <div class="fin-stat-row">
+        <div class="fin-stat-label">QUÊTES RÉUSSIES</div>
+        <div class="fin-stat-val"><span id="fin-ok">0</span>/35</div>
+      </div>
+      <div class="fin-stat-row">
+        <div class="fin-stat-label">TEMPS DE JEU</div>
+        <div class="fin-stat-val" id="fin-temps">00:00</div>
+      </div>
+      <div class="fin-stat-row">
+        <div class="fin-stat-label">PARTENAIRE</div>
+        <div class="fin-stat-val" id="fin-starter"></div>
+      </div>
+    </div>
+    <div class="fin-bar-wrap">
+      <div class="fin-bar" id="fin-bar" style="width:0%"></div>
+    </div>
+    <button class="btn-rejouer" onclick="rejouer()">▶ REJOUER</button>
+  </div>
+</div>
+
+<!-- ═══════════════ ÉCRAN DOCUMENTATION ═══════════════ -->
+<div id="ecran-doc" class="hidden">
+  <div class="doc-header">
+    <button class="btn-doc-retour" onclick="retourMenuDepuisDoc()">◀ MENU</button>
+    <div class="doc-title">📚 DOCUMENTATION SQL · KANTO</div>
+  </div>
+  <div class="doc-box">
+    <div class="doc-tabs">
+      <button class="doc-tab active" id="tab-ref"    onclick="switchDocTab('ref')">RÉFÉRENCE SQL</button>
+      <button class="doc-tab"        id="tab-schema" onclick="switchDocTab('schema')">SCHÉMA DB</button>
+    </div>
+    <div class="doc-section" id="doc-section-ref">
+      <div class="doc-ref-grid" id="doc-ref-grid"></div>
+    </div>
+    <div class="doc-section hidden" id="doc-section-schema">
+      <div class="schema-grid" id="schema-grid"></div>
+    </div>
+    <div class="doc-sandbox">
+      <div class="doc-sandbox-label">&gt; BAC À SABLE SQL_ <span style="font-size:5px;color:#0A2A0A;letter-spacing:1px">&nbsp;CTRL+ENTER POUR EXÉCUTER</span></div>
+      <textarea id="doc-requete" spellcheck="false" placeholder="SELECT * FROM pokemon LIMIT 5;"></textarea>
+      <div class="doc-sandbox-btns">
+        <button class="btn-doc-exec" id="btn-doc-exec" onclick="executerDocSQL()">▶ EXÉCUTER</button>
+        <button class="btn-doc-clear" onclick="viderSandbox()">✕ VIDER</button>
+      </div>
+      <div id="doc-feedback"></div>
+      <div id="doc-results"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Constantes ────────────────────────────────────────────────────────────────
+const TOTAL = 35;
+const SPRITE_BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+
+// Définition des 9 actes (premier/dernier quest, label court, message de transition)
+const ACTES = [
+  { num:1, label:"BOURG",    first:1,  last:3,  zone:"Bourg Palette",  color:"#306230",
+    msg:"Bourg Palette est derrière toi. La Forêt de Jade s'étend devant toi, grouillante de Pokémon Insecte..." },
+  { num:2, label:"JADE",     first:4,  last:7,  zone:"Forêt → Argenta",color:"#0f380f",
+    msg:"L'Arène d'Argenta est vaincue ! La Team Rocket rôde. Cap sur le sinistre Mont Sélénite..." },
+  { num:3, label:"SÉLÉNI.",  first:8,  last:11, zone:"Mont Sélénite",   color:"#6b6b6b",
+    msg:"Tu émerges de la grotte obscure. Les lumières de Céladopole brillent au loin..." },
+  { num:4, label:"CÉLADO.",  first:12, last:15, zone:"Céladopole",      color:"#4a90d9",
+    msg:"Le labo Silph a livré ses secrets. Une brise froide vient du nord... direction Lavanville." },
+  { num:5, label:"LAVANDE",  first:16, last:19, zone:"Lavanville",      color:"#4a0a4a",
+    msg:"Les esprits de Lavanville sont en paix. La Route Nationale s'étire vers Parmanie et Carmin..." },
+  { num:6, label:"PARMA.",   first:20, last:23, zone:"Parmanie → Carmin",color:"#8b2020",
+    msg:"La Team Rocket est repoussée ! Giovanni bat en retraite. Un bateau t'attend vers Cramois'île..." },
+  { num:7, label:"CRAMO.",   first:24, last:27, zone:"Cramois'île",     color:"#d96a00",
+    msg:"L'île est sauvée. Tu prends la route des sommets vers Azuria et Grisaille City..." },
+  { num:8, label:"AZURIA",   first:28, last:31, zone:"Azuria → Grisaille",color:"#00a8d9",
+    msg:"Tu es prêt. Le Plateau Indigo se profile à l'horizon. La Ligue Pokémon t'attend..." },
+  { num:9, label:"INDIGO",   first:32, last:35, zone:"Plateau Indigo",  color:"#d9a800",
+    msg:null },
+];
+
+// ── Backgrounds par acte ───────────────────────────────────────────────────────
+const BACKGROUNDS = [
+  null,
+  '/static/backgrounds/bourg_palette.png',
+  '/static/backgrounds/foret_jade.png',
+  '/static/backgrounds/mont_selenite.png',
+  '/static/backgrounds/celadopole.png',
+  '/static/backgrounds/lavanville.png',
+  '/static/backgrounds/carmin_sur_mer.png',
+  "/static/backgrounds/cramois'ile.png",
+  '/static/backgrounds/azuria.png',
+  '/static/backgrounds/plateau_indigo.png',
+];
+let _currentBgLayer = 'a';
+
+function changeBg(acteNum) {
+  const url = BACKGROUNDS[acteNum];
+  if (!url) return;
+  const layerA = document.getElementById('bg-a');
+  const layerB = document.getElementById('bg-b');
+  if (_currentBgLayer === 'a') {
+    layerB.style.backgroundImage = `url("${url}")`;
+    layerB.classList.add('active');
+    layerA.classList.remove('active');
+    _currentBgLayer = 'b';
+  } else {
+    layerA.style.backgroundImage = `url("${url}")`;
+    layerA.classList.add('active');
+    layerB.classList.remove('active');
+    _currentBgLayer = 'a';
+  }
+}
+
+// ── État ─────────────────────────────────────────────────────────────────────
+let quete    = 1;
+let scores   = new Array(TOTAL).fill(null); // null / true / false
+let joueurPseudo      = '';
+let joueurStarterId   = null;
+let joueurStarterNom  = '';
+let selectedStarterId = null;
+let startTime         = null;
+let transitionNextQ   = null; // quête à charger après transition
+let currentPokemonId  = null; // sprite en cours
+
+// Mode de jeu
+let gameMode = 'histoire'; // 'histoire' | 'arcade'
+
+// État arcade
+let defiCount       = 0;   // questions chargées (tentées)
+let defiOk          = 0;   // questions réussies
+let defiStreak      = 0;   // streak actuel
+let defiChallengeId = null; // question_id en cours
+let arcadeNiveau    = 0;   // 0=aléatoire, 1-4=niveau fixe
+
+// ID joueur (pour /arcade/stats)
+let joueurId = null;
+
+// ── Démarrage ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  lancerIntro();
+});
+
+document.getElementById('requete').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); valider(); }
+});
+document.getElementById('doc-requete').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); executerDocSQL(); }
+});
+
+// ── INTRO ─────────────────────────────────────────────────────────────────────
+const TEXTE_INTRO = "Le Professeur Chen a besoin de ton aide. Des Pokémon ont disparu dans toute la région de Kanto. Seul un dresseur maîtrisant l'art des requêtes SQL pourra les retrouver dans la base de données de Kanto. Quel est ton nom, dresseur ?";
+
+function lancerIntro() {
+  changeBg(1); // Bourg Palette par défaut sur l'écran d'intro
+  typewriterEffect(document.getElementById('prof-text'), TEXTE_INTRO, 28, () => {
+    document.getElementById('pseudo-wrap').style.display = 'flex';
+    document.getElementById('btn-commencer').style.display = 'block';
+    document.getElementById('pseudo-input').focus();
+  });
+}
+
+function typewriterEffect(el, text, speed, onDone) {
+  let i = 0;
+  el.innerHTML = '<span class="cursor-blink"></span>';
+  const cursor = el.querySelector('.cursor-blink');
+  const interval = setInterval(() => {
+    if (i < text.length) {
+      cursor.insertAdjacentText('beforebegin', text[i]);
+      i++;
+    } else {
+      clearInterval(interval);
+      cursor.remove();
+      if (onDone) onDone();
+    }
+  }, speed);
+}
+
+document.getElementById('pseudo-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') allerEtapeMode();
+});
+
+function allerEtapeMode() {
+  const pseudo = document.getElementById('pseudo-input').value.trim();
+  if (!pseudo) {
+    document.getElementById('pseudo-input').focus();
+    return;
+  }
+  joueurPseudo = pseudo;
+  document.getElementById('step-a').style.display = 'none';
+  document.getElementById('step-mode').style.display = 'flex';
+}
+
+async function allerEtapeB(mode) {
+  gameMode = mode;
+  document.getElementById('step-mode').style.display = 'none';
+  document.getElementById('step-b').style.display = 'flex';
+
+  const grid = document.getElementById('starters-grid');
+  grid.innerHTML = '<div style="font-size:7px;color:var(--lcd-dim);grid-column:1/-1">CHARGEMENT…</div>';
+
+  try {
+    const r = await fetch('/starters');
+    const starters = await r.json();
+    afficherStarters(starters);
+  } catch {
+    grid.innerHTML = '<div style="font-size:7px;color:#FF4422;grid-column:1/-1">ERREUR CHARGEMENT</div>';
+  }
+}
+
+function afficherStarters(starters) {
+  const MAX_STAT = 130;
+  const STATS = [
+    { key: 'pv',       label: 'PV' },
+    { key: 'attaque',  label: 'ATT' },
+    { key: 'defense',  label: 'DEF' },
+    { key: 'vitesse',  label: 'VIT' },
+  ];
+
+  const grid = document.getElementById('starters-grid');
+  grid.innerHTML = '';
+
+  starters.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'starter-card';
+    card.dataset.type = s.type1;
+    card.dataset.id = s.id;
+
+    const statRows = STATS.map(st => {
+      const pct = Math.round((s[st.key] / MAX_STAT) * 100);
+      return `<div class="s-stat-row">
+        <div class="s-stat-name">${st.label}</div>
+        <div class="s-stat-bar-bg"><div class="s-stat-bar" style="width:${pct}%"></div></div>
+        <div class="s-stat-val">${s[st.key]}</div>
+      </div>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="starter-sprite-wrap">
+        <img class="starter-sprite" src="${SPRITE_BASE}${s.id}.png" alt="${s.nom}" onerror="this.parentElement.style.display='none'">
+      </div>
+      <div class="s-nom">${s.nom.toUpperCase()}</div>
+      <div class="s-type">${s.type1}${s.type2 ? ' / ' + s.type2 : ''}</div>
+      <div class="s-stats">${statRows}</div>
+    `;
+
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.starter-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedStarterId = s.id;
+      document.getElementById('btn-confirmer').disabled = false;
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+async function commencerAventure() {
+  if (!selectedStarterId) return;
+
+  const btn = document.getElementById('btn-confirmer');
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    const resp = await fetch('/nouvelle_partie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pseudo: joueurPseudo, starter_id: selectedStarterId }),
+    });
+    const data = await resp.json();
+    if (data.succes) {
+      joueurStarterId = selectedStarterId;
+      joueurId = data.joueur_id || null;
+      if (gameMode === 'arcade') {
+        demarrerArcade();
+      } else {
+        demarrerJeu();
+      }
+    } else {
+      btn.disabled = false;
+      btn.textContent = '▶ COMMENCER L\'AVENTURE';
+      alert('Erreur: ' + (data.erreur || 'inconnue'));
+    }
+  } catch {
+    btn.disabled = false;
+    btn.textContent = '▶ COMMENCER L\'AVENTURE';
+  }
+}
+
+function demarrerJeu() {
+  const overlay = document.getElementById('ecran-intro');
+  overlay.classList.add('fade-out');
+  startTime = Date.now();
+  setTimeout(async () => {
+    overlay.style.display = 'none';
+    const gc = document.getElementById('game-content');
+    gc.style.display = 'flex';
+
+    // Récupérer le nom du starter choisi
+    try {
+      const r = await fetch('/starters');
+      const starters = await r.json();
+      const s = starters.find(x => x.id === joueurStarterId);
+      if (s) joueurStarterNom = s.nom;
+    } catch { joueurStarterNom = '?'; }
+
+    // Badge dresseur
+    document.getElementById('db-pseudo').textContent  = joueurPseudo.toUpperCase();
+    document.getElementById('db-starter').textContent = joueurStarterNom.toUpperCase();
+    document.getElementById('dresseur-badge').style.display = 'block';
+
+    // Écran de fin - préremplir
+    document.getElementById('fin-pseudo').textContent  = joueurPseudo.toUpperCase();
+    document.getElementById('fin-starter').textContent = joueurStarterNom.toUpperCase();
+
+    buildActBar();
+    buildPips();
+    chargerQuete(1);
+  }, 700);
+}
+
+async function demarrerArcade() {
+  const overlay = document.getElementById('ecran-intro');
+  overlay.classList.add('fade-out');
+  startTime = Date.now();
+  defiCount = 0; defiOk = 0; defiStreak = 0;
+
+  setTimeout(async () => {
+    overlay.style.display = 'none';
+    const gc = document.getElementById('game-content');
+    gc.style.display = 'flex';
+
+    try {
+      const r = await fetch('/starters');
+      const starters = await r.json();
+      const s = starters.find(x => x.id === joueurStarterId);
+      if (s) joueurStarterNom = s.nom;
+    } catch { joueurStarterNom = '?'; }
+
+    document.getElementById('db-pseudo').textContent  = joueurPseudo.toUpperCase();
+    document.getElementById('db-starter').textContent = joueurStarterNom.toUpperCase();
+    document.getElementById('dresseur-badge').style.display = 'block';
+
+    // Interface arcade
+    document.getElementById('act-bar').style.display      = 'none';
+    document.getElementById('arcade-bar').classList.add('visible');
+    document.getElementById('prog-pips').style.display    = 'none';
+    document.getElementById('score-histoire').style.display = 'none';
+    document.getElementById('score-arcade').style.display   = '';
+    document.getElementById('lcd-header-histoire').style.display = 'none';
+    document.getElementById('lcd-header-arcade').style.display   = '';
+    document.getElementById('btn-passer').classList.add('visible');
+
+    chargerDefiArcade();
+  }, 700);
+}
+
+// ── Mode Arcade ───────────────────────────────────────────────────────────────
+
+async function chargerDefiArcade() {
+  defiCount++;
+  defiChallengeId = null;
+
+  setFeedback('', '');
+  document.getElementById('results-zone').innerHTML = '';
+  document.getElementById('q-indice').classList.remove('visible');
+  cacherBoutonSuivant();
+  document.getElementById('requete').value = '';
+
+  document.getElementById('q-num-arc').textContent = String(defiCount).padStart(2, '0');
+  document.getElementById('ss-defi').textContent   = String(defiCount).padStart(2, '0');
+  document.getElementById('q-titre').textContent   = 'CHARGEMENT…';
+  document.getElementById('q-desc').innerHTML      = '';
+
+  try {
+    const r = await fetch(`/arcade/question?niveau=${arcadeNiveau}`);
+    const d = await r.json();
+    defiChallengeId = d.id;
+
+    document.getElementById('q-titre').textContent  = d.titre.toUpperCase();
+    document.getElementById('q-desc').innerHTML     = d.description.replace(/\n/g, '<br>');
+    document.getElementById('q-indice').textContent = d.indice;
+
+    const niveauLabel = d.niveau ? `NIV.${d.niveau}` : 'ARCADE';
+    document.getElementById('q-zone').textContent =
+      `▶ ARCADE · ${niveauLabel} · ${(d.categorie || '').toUpperCase()}`;
+
+    // Pas de contexte narratif en arcade
+    document.getElementById('q-contexte').classList.remove('visible');
+
+    chargerSprite(d.pokemon_id || null);
+
+  } catch {
+    document.getElementById('q-titre').textContent = 'ERREUR CONNEXION';
+  }
+}
+
+async function validerArcade() {
+  const req = document.getElementById('requete').value.trim();
+  if (!req) { setFeedback('> SAISIR UNE REQUETE SQL', 'bad'); return; }
+  if (!defiChallengeId) { setFeedback('> AUCUN DÉFI CHARGÉ', 'bad'); return; }
+
+  setFeedback('> ANALYSE EN COURS…', 'ok loader');
+  document.getElementById('results-zone').innerHTML = '';
+  document.getElementById('btn-val').disabled = true;
+
+  try {
+    const resp = await fetch('/arcade/valider', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_id: defiChallengeId, requete: req, joueur_id: joueurId }),
+    });
+    const data = await resp.json();
+    document.getElementById('btn-val').disabled = false;
+    afficherReponseArcade(data);
+  } catch {
+    document.getElementById('btn-val').disabled = false;
+    setFeedback('> ERREUR: SERVEUR INJOIGNABLE', 'bad');
+  }
+}
+
+function afficherReponseArcade(data) {
+  if (data.erreur_sql) { afficherErreurSQL(data.message); return; }
+  if (data.erreur)     { setFeedback('> ERR: ' + data.erreur, 'bad'); return; }
+
+  if (data.succes) {
+    soundSucces();
+    defiOk++;
+    defiStreak++;
+    majArcadeUI();
+    if (data.resultat) buildTable(data.resultat, 'RÉSULTAT', 'r-ok');
+    setFeedback('> ' + data.message, 'ok');
+    revelerSprite();
+    const btn = document.getElementById('btn-next-quest');
+    btn.textContent = 'DÉFI SUIVANT ▶';
+    btn.classList.add('visible');
+  } else {
+    soundErreur();
+    defiStreak = 0;
+    majArcadeUI();
+    setFeedback('> ' + data.message, 'bad');
+    if (data.resultat) buildTable(data.resultat, 'CE QUE TA REQUÊTE RETOURNE', 'r-bad');
+    if (data.attendu)  buildTable(data.attendu,  'CE QUI ÉTAIT ATTENDU',       '');
+  }
+}
+
+function afficherErreurSQL(message) {
+  setFeedback('', '');
+  const zone = document.getElementById('results-zone');
+  zone.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'sql-error-msg';
+  div.innerHTML = '<div class="sql-error-label">ERREUR SQL</div>'
+    + '<div class="sql-error-detail">' + message + '</div>';
+  zone.appendChild(div);
+}
+
+function majArcadeUI() {
+  document.getElementById('sc-arc-ok').textContent  = defiOk;
+  document.getElementById('sc-streak').textContent  = defiStreak;
+  document.getElementById('arc-ok-bar').textContent     = defiOk;
+  document.getElementById('arc-tried-bar').textContent  = defiCount;
+  document.getElementById('arc-streak-bar').textContent = defiStreak;
+  const pct = defiCount > 0 ? Math.round((defiOk / defiCount) * 100) + '%' : '–';
+  document.getElementById('arc-pct-bar').textContent = pct;
+}
+
+function setNiveau(n) {
+  arcadeNiveau = n;
+  document.querySelectorAll('.diff-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.niveau) === n);
+  });
+}
+
+function passerQuestion() {
+  // Skip sans casser le streak, mais incrémente les tentées via defiCount
+  chargerDefiArcade();
+}
+
+// ── Barre d'actes ────────────────────────────────────────────────────────────
+function buildActBar() {
+  const bar = document.getElementById('act-bar');
+  bar.innerHTML = '';
+  ACTES.forEach(a => {
+    const seg = document.createElement('div');
+    seg.className = 'act-seg as-locked';
+    seg.id = `act-seg-${a.num}`;
+    seg.title = a.zone;
+    seg.style.setProperty('--act-color', a.color);
+    seg.innerHTML = `
+      <div class="act-seg-badge">${a.num}</div>
+      <div class="act-seg-label">${a.label}</div>`;
+    seg.addEventListener('click', () => chargerQuete(a.first));
+    bar.appendChild(seg);
+  });
+  majActBar();
+}
+
+function majActBar() {
+  const acteActuel = getActe(quete).num;
+  document.body.dataset.acte = acteActuel;
+  changeBg(acteActuel);
+  ACTES.forEach(a => {
+    const seg = document.getElementById(`act-seg-${a.num}`);
+    if (!seg) return;
+    const acteDone = scores.slice(a.first - 1, a.last).every(s => s === true);
+    const badgeEl = seg.querySelector('.act-seg-badge');
+    seg.className = 'act-seg';
+    if (acteDone) {
+      seg.classList.add('as-done');
+      if (badgeEl) badgeEl.textContent = '✓';
+    } else if (a.num === acteActuel) {
+      seg.classList.add('as-current');
+      if (badgeEl) badgeEl.textContent = a.num;
+    } else if (a.num < acteActuel) {
+      seg.classList.add('as-done');
+      if (badgeEl) badgeEl.textContent = '✓';
+    } else {
+      seg.classList.add('as-locked');
+      if (badgeEl) badgeEl.textContent = a.num;
+    }
+  });
+}
+
+function getActe(numQuete) {
+  return ACTES.find(a => numQuete >= a.first && numQuete <= a.last) || ACTES[0];
+}
+
+// ── Pips de progression ───────────────────────────────────────────────────────
+function buildPips() {
+  const wrap = document.getElementById('prog-pips');
+  for (let i = 1; i <= TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'pip';
+    d.id = `pip-${i}`;
+    d.title = `Quête ${i}`;
+    d.style.cssText = 'width:7px;height:7px;'; // smaller for 35
+    d.addEventListener('click', () => chargerQuete(i));
+    wrap.appendChild(d);
+  }
+}
+
+function majPips() {
+  let ok = 0, fail = 0;
+  for (let i = 1; i <= TOTAL; i++) {
+    const cl = ['pip'];
+    if (i === quete)           cl.push('p-active');
+    if (scores[i-1] === true)  { cl.push('p-ok');   ok++; }
+    if (scores[i-1] === false) { cl.push('p-fail');  fail++; }
+    document.getElementById(`pip-${i}`).className = cl.join(' ');
+  }
+  document.getElementById('ss-num').textContent  = String(quete).padStart(2,'0');
+  document.getElementById('sc-ok').textContent   = ok;
+  document.getElementById('sc-fail').textContent = fail;
+  document.getElementById('btn-prev').disabled = (quete === 1);
+  document.getElementById('btn-next').disabled = (quete === TOTAL);
+  majActBar();
+}
+
+// ── Chargement d'une quête ────────────────────────────────────────────────────
+async function chargerQuete(n) {
+  quete = n;
+  majPips();
+
+  // Réinitialiser le panneau droit
+  setFeedback('', '');
+  document.getElementById('results-zone').innerHTML = '';
+  document.getElementById('q-indice').classList.remove('visible');
+  cacherBoutonSuivant();
+
+  // Mettre à jour l'écran principal
+  document.getElementById('q-num').textContent   = String(n).padStart(2,'0');
+  document.getElementById('q-titre').textContent = '…';
+  document.getElementById('q-desc').innerHTML    = '';
+
+  try {
+    const r = await fetch(`/quete/${n}`);
+    const d = await r.json();
+
+    document.getElementById('q-num').textContent     = String(d.numero).padStart(2,'0');
+    document.getElementById('q-acte').textContent    = d.acte;
+    document.getElementById('q-zone').textContent    = '▶ ' + (d.zone || '');
+    document.getElementById('q-titre').textContent   = d.titre.toUpperCase();
+    document.getElementById('q-desc').innerHTML      = d.description.replace(/\n/g,'<br>');
+    document.getElementById('q-indice').textContent  = d.indice;
+
+    const contexteEl = document.getElementById('q-contexte');
+    if (d.contexte) {
+      contexteEl.textContent = '> ' + d.contexte;
+      contexteEl.classList.add('visible');
+    } else {
+      contexteEl.classList.remove('visible');
+    }
+
+    // Sprite
+    let pid = d.pokemon_id;
+    if (pid === 'starter') pid = joueurStarterId;
+    chargerSprite(pid);
+
+  } catch {
+    document.getElementById('q-titre').textContent = 'ERREUR CONNEXION';
+  }
+}
+
+function naviguer(delta) { chargerQuete(quete + delta); }
+
+// ── Sprite ────────────────────────────────────────────────────────────────────
+function chargerSprite(pokemonId) {
+  currentPokemonId = pokemonId;
+  const frame  = document.getElementById('sprite-frame');
+  const img    = document.getElementById('sprite-img');
+  const qmark  = document.getElementById('sprite-qmark');
+  const nomEl  = document.getElementById('sprite-nom');
+  const typeEl = document.getElementById('sprite-type');
+
+  if (!pokemonId) {
+    frame.classList.remove('visible');
+    img.src = '';
+    return;
+  }
+
+  frame.classList.add('visible');
+  // Silhouette state
+  img.className = 'sprite-img silhouette';
+  img.src = SPRITE_BASE + pokemonId + '.png';
+  img.onerror = () => { frame.classList.remove('visible'); };
+  qmark.className = 'sprite-q-mark';
+  nomEl.textContent  = '??????';
+  nomEl.className    = 'sprite-nom';
+  typeEl.textContent = '';
+  typeEl.className   = 'sprite-type';
+}
+
+async function revelerSprite() {
+  if (!currentPokemonId) return;
+  const frame  = document.getElementById('sprite-frame');
+  const img    = document.getElementById('sprite-img');
+  const qmark  = document.getElementById('sprite-qmark');
+  const nomEl  = document.getElementById('sprite-nom');
+  const typeEl = document.getElementById('sprite-type');
+  const screen = document.getElementById('sprite-screen');
+
+  img.className = 'sprite-img revealed';
+  qmark.className = 'sprite-q-mark hidden';
+  screen.classList.add('flash');
+  setTimeout(() => screen.classList.remove('flash'), 900);
+
+  // Fetch name + type from DB via pokemon list (use starters endpoint or search)
+  try {
+    const r = await fetch(`/pokemon_info/${currentPokemonId}`);
+    if (r.ok) {
+      const p = await r.json();
+      nomEl.textContent = p.nom.toUpperCase();
+      typeEl.textContent = p.type1 + (p.type2 ? ' / ' + p.type2 : '');
+    } else {
+      nomEl.textContent = '#' + currentPokemonId;
+    }
+  } catch {
+    nomEl.textContent = '#' + currentPokemonId;
+  }
+  nomEl.className = 'sprite-nom revealed';
+  typeEl.className = 'sprite-type revealed';
+}
+
+// ── Indice ────────────────────────────────────────────────────────────────────
+function toggleIndice() {
+  document.getElementById('q-indice').classList.toggle('visible');
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function effacer() {
+  document.getElementById('requete').value = '';
+  document.getElementById('requete').focus();
+  setFeedback('', '');
+  document.getElementById('results-zone').innerHTML = '';
+}
+
+// ── Valider ───────────────────────────────────────────────────────────────────
+async function valider() {
+  if (gameMode === 'arcade') { validerArcade(); return; }
+  const req = document.getElementById('requete').value.trim();
+  if (!req) { setFeedback('> SAISIR UNE REQUETE SQL', 'bad'); return; }
+
+  setFeedback('> ANALYSE EN COURS…', 'ok loader');
+  document.getElementById('results-zone').innerHTML = '';
+  document.getElementById('btn-val').disabled = true;
+
+  try {
+    const resp = await fetch('/valider', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numero: quete, requete: req }),
+    });
+    const data = await resp.json();
+    document.getElementById('btn-val').disabled = false;
+    afficherReponse(data);
+  } catch {
+    document.getElementById('btn-val').disabled = false;
+    setFeedback('> ERREUR: SERVEUR INJOIGNABLE', 'bad');
+  }
+}
+
+function afficherReponse(data) {
+  if (data.erreur_sql) { afficherErreurSQL(data.message); return; }
+  if (data.erreur)     { setFeedback('> ERR: ' + data.erreur, 'bad'); return; }
+
+  if (data.succes) {
+    soundSucces();
+    scores[quete - 1] = true;
+    majPips();
+    if (data.resultat) buildTable(data.resultat, 'RÉSULTAT', 'r-ok');
+    setFeedback('> ' + data.message, 'ok');
+    revelerSprite();
+    afficherBoutonSuivant();
+  } else {
+    soundErreur();
+    if (scores[quete - 1] !== true) scores[quete - 1] = false;
+    majPips();
+    setFeedback('> ' + data.message, 'bad');
+    if (data.resultat) buildTable(data.resultat, 'CE QUE TA REQUÊTE RETOURNE', 'r-bad');
+    if (data.attendu)  buildTable(data.attendu,  'CE QUI ÉTAIT ATTENDU', '');
+  }
+}
+
+// ── Bouton quête suivante ────────────────────────────────────────────────────
+function afficherBoutonSuivant() {
+  const btn = document.getElementById('btn-next-quest');
+  if (quete === TOTAL) {
+    btn.textContent = 'VOIR LE RESULTAT FINAL ▶';
+  } else {
+    const next = getActe(quete + 1);
+    const acteCourant = getActe(quete);
+    if (quete === acteCourant.last) {
+      btn.textContent = 'ACTE ' + (acteCourant.num + 1) + ' : ' + next.zone.toUpperCase() + ' ▶';
+    } else {
+      btn.textContent = 'QUÊTE ' + (quete + 1) + ' ▶';
+    }
+  }
+  btn.classList.add('visible');
+}
+
+function cacherBoutonSuivant() {
+  document.getElementById('btn-next-quest').classList.remove('visible');
+}
+
+function nextQuest() {
+  cacherBoutonSuivant();
+  if (gameMode === 'arcade') { chargerDefiArcade(); return; }
+  const acteData = getActe(quete);
+  const estDernierDActe = (quete === acteData.last);
+
+  if (quete === TOTAL) {
+    afficherFin();
+  } else if (estDernierDActe) {
+    afficherTransition(acteData, quete + 1);
+  } else {
+    chargerQuete(quete + 1);
+  }
+}
+
+// ── Transition entre actes ───────────────────────────────────────────────────
+function afficherTransition(acteTermine, prochaineQuete) {
+  soundChangementActe();
+  transitionNextQ = prochaineQuete;
+  const ok = scores.filter(s => s === true).length;
+  document.getElementById('tr-badge').textContent = `ACTE ${acteTermine.num} TERMINÉ`;
+  document.getElementById('tr-titre').textContent = `${acteTermine.zone.toUpperCase()}\nCOMPLÉTÉ !`;
+  document.getElementById('tr-titre').style.whiteSpace = 'pre-line';
+  document.getElementById('tr-text').textContent = acteTermine.msg || '';
+  document.getElementById('tr-score-val').textContent = ok;
+  document.getElementById('transition-popup').classList.remove('hidden');
+}
+
+function fermerTransition() {
+  document.getElementById('transition-popup').classList.add('hidden');
+  if (transitionNextQ) chargerQuete(transitionNextQ);
+  transitionNextQ = null;
+}
+
+// ── Écran de fin ────────────────────────────────────────────────────────────
+function afficherFin() {
+  const ok = scores.filter(s => s === true).length;
+  const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = elapsed % 60;
+  const tempsStr = h > 0
+    ? `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+  document.getElementById('fin-ok').textContent    = ok;
+  document.getElementById('fin-temps').textContent = tempsStr;
+  document.getElementById('ecran-fin').classList.remove('hidden');
+
+  // Animer la barre de score après un court délai
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.getElementById('fin-bar').style.width = `${Math.round((ok / TOTAL) * 100)}%`;
+    });
+  });
+}
+
+function rejouer() {
+  document.getElementById('ecran-fin').classList.add('hidden');
+  document.getElementById('ecran-doc').classList.add('hidden');
+  scores = new Array(TOTAL).fill(null);
+  quete  = 1;
+  startTime = null;
+  joueurPseudo = '';
+  joueurStarterId = null;
+  joueurStarterNom = '';
+  selectedStarterId = null;
+  gameMode = 'histoire';
+  defiCount = 0; defiOk = 0; defiStreak = 0; defiChallengeId = null;
+  arcadeNiveau = 0; joueurId = null;
+  document.getElementById('arcade-bar').classList.remove('visible');
+  document.getElementById('btn-passer').classList.remove('visible');
+  document.querySelectorAll('.diff-btn').forEach(b =>
+    b.classList.toggle('active', parseInt(b.dataset.niveau) === 0));
+
+  document.getElementById('game-content').style.display = 'none';
+  document.getElementById('ecran-intro').style.display  = 'flex';
+  document.getElementById('ecran-intro').classList.remove('fade-out');
+  document.getElementById('ecran-intro').style.opacity  = '1';
+  document.getElementById('step-a').style.display    = 'flex';
+  document.getElementById('step-mode').style.display = 'none';
+  document.getElementById('step-b').style.display    = 'none';
+  document.getElementById('pseudo-input').value = '';
+  document.getElementById('prof-text').innerHTML = '';
+  document.getElementById('prog-pips').innerHTML = '';
+  document.getElementById('prog-pips').style.display = '';
+  document.getElementById('act-bar').innerHTML   = '';
+  document.getElementById('act-bar').style.display = '';
+  // Rétablir l'affichage histoire
+  document.getElementById('score-histoire').style.display = '';
+  document.getElementById('score-arcade').style.display   = 'none';
+  document.getElementById('lcd-header-histoire').style.display = '';
+  document.getElementById('lcd-header-arcade').style.display   = 'none';
+  setFeedback('', '');
+  cacherBoutonSuivant();
+  document.getElementById('results-zone').innerHTML = '';
+  document.getElementById('sprite-frame').classList.remove('visible');
+  currentPokemonId = null;
+  lancerIntro();
+}
+
+// ── Construction d'un tableau LCD ─────────────────────────────────────────────
+function buildTable(payload, titre, labelCls) {
+  const zone  = document.getElementById('results-zone');
+  const block = document.createElement('div');
+  block.className = 'r-block';
+
+  const lbl = document.createElement('div');
+  lbl.className = `r-label ${labelCls}`;
+  lbl.innerHTML = titre + ` <span class="r-count">(${payload.total})</span>`;
+  block.appendChild(lbl);
+
+  if (!payload.lignes.length) {
+    const p = document.createElement('div');
+    p.style.cssText = 'font-size:7px;color:var(--lcd-dim);padding:4px 0';
+    p.textContent = '> AUCUN RESULTAT';
+    block.appendChild(p);
+    zone.appendChild(block);
+    return;
+  }
+
+  const wrap  = document.createElement('div');
+  wrap.className = 'table-lcd-wrap';
+  const table = document.createElement('table');
+  table.className = 'table-lcd';
+
+  // En-tête
+  const thead = table.createTHead();
+  const hrow  = thead.insertRow();
+  payload.colonnes.forEach(c => {
+    const th = document.createElement('th');
+    th.textContent = c.toUpperCase();
+    hrow.appendChild(th);
+  });
+
+  // Corps
+  const tbody = table.createTBody();
+  payload.lignes.forEach(row => {
+    const tr = tbody.insertRow();
+    row.forEach(val => {
+      const td = tr.insertCell();
+      if (val === null) { td.textContent = 'NULL'; td.className = 'null-v'; }
+      else td.textContent = val;
+    });
+  });
+
+  wrap.appendChild(table);
+
+  if (payload.total > payload.lignes.length) {
+    const note = document.createElement('div');
+    note.className = 'table-trunc';
+    note.textContent = `… ${payload.total} LIGNES (LIMITE: ${payload.lignes.length})`;
+    wrap.appendChild(note);
+  }
+
+  block.appendChild(wrap);
+  zone.appendChild(block);
+}
+
+// ── Feedback ──────────────────────────────────────────────────────────────────
+function setFeedback(text, type) {
+  const el = document.getElementById('feedback');
+  if (!text) { el.className = 'feedback'; return; }
+  el.textContent = text;
+  el.className = `feedback vis ${type}`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MODE DOCUMENTATION
+// ══════════════════════════════════════════════════════════════════════════════
+
+const DOC_TOPICS = [
+  { id: 'select-all', titre: 'SELECT *', cat: 'BASES',
+    desc: 'Sélectionne toutes les colonnes d\'une table. Pratique pour explorer, mais à éviter en production (coûteux).',
+    syntaxe: 'SELECT * FROM table;',
+    exemple: 'SELECT * FROM pokemon LIMIT 5;' },
+  { id: 'select-cols', titre: 'SELECT colonnes', cat: 'BASES',
+    desc: 'Sélectionne uniquement les colonnes dont tu as besoin. Séparées par des virgules.',
+    syntaxe: 'SELECT col1, col2 FROM table;',
+    exemple: 'SELECT nom, type1, pv FROM pokemon LIMIT 5;' },
+  { id: 'alias', titre: 'AS (alias)', cat: 'BASES',
+    desc: 'Renomme une colonne dans le résultat avec AS. Très utile avec les fonctions d\'agrégation.',
+    syntaxe: 'SELECT col AS nouveau_nom\nFROM table;',
+    exemple: 'SELECT nom, pv AS points_de_vie,\n       attaque AS att\nFROM pokemon LIMIT 5;' },
+  { id: 'where-eq', titre: 'WHERE =', cat: 'FILTRAGE',
+    desc: 'Filtre les lignes selon une valeur exacte. Les chaînes de texte s\'écrivent entre guillemets simples.',
+    syntaxe: 'SELECT * FROM table\nWHERE colonne = \'valeur\';',
+    exemple: 'SELECT nom, type1 FROM pokemon\nWHERE type1 = \'Feu\';' },
+  { id: 'where-comp', titre: 'WHERE <, >, <=, >=', cat: 'FILTRAGE',
+    desc: 'Compare des valeurs numériques. < (inférieur strict), > (supérieur strict), <= (inf. ou égal), >= (sup. ou égal).',
+    syntaxe: 'SELECT * FROM table\nWHERE colonne > valeur;',
+    exemple: 'SELECT nom, pv FROM pokemon\nWHERE pv >= 100\nORDER BY pv DESC;' },
+  { id: 'and-or', titre: 'AND / OR', cat: 'FILTRAGE',
+    desc: 'AND : toutes les conditions doivent être vraies. OR : au moins une condition suffit. Utilise des parenthèses pour combiner.',
+    syntaxe: 'WHERE cond1 AND cond2\nWHERE cond1 OR cond2\nWHERE (cond1 OR cond2) AND cond3',
+    exemple: 'SELECT nom FROM pokemon\nWHERE type1 = \'Eau\' AND pv > 80;' },
+  { id: 'like', titre: 'LIKE', cat: 'FILTRAGE',
+    desc: '% remplace n\'importe quelle suite de caractères (même vide). _ remplace exactement 1 caractère. Sensible à la casse selon le SGBD.',
+    syntaxe: 'WHERE col LIKE \'début%\'   -- commence par\nWHERE col LIKE \'%fin\'     -- finit par\nWHERE col LIKE \'%milieu%\' -- contient',
+    exemple: 'SELECT nom FROM pokemon\nWHERE nom LIKE \'R%\';' },
+  { id: 'between', titre: 'BETWEEN', cat: 'FILTRAGE',
+    desc: 'Filtre un intervalle. Les deux bornes sont incluses. Équivaut à col >= lo AND col <= hi.',
+    syntaxe: 'WHERE colonne BETWEEN valeur1 AND valeur2',
+    exemple: 'SELECT nom, pv FROM pokemon\nWHERE pv BETWEEN 80 AND 100;' },
+  { id: 'null', titre: 'IS NULL / NOT NULL', cat: 'FILTRAGE',
+    desc: 'NULL = valeur absente/inconnue. Ne jamais utiliser = NULL : toujours IS NULL ou IS NOT NULL.',
+    syntaxe: 'WHERE colonne IS NULL\nWHERE colonne IS NOT NULL',
+    exemple: 'SELECT nom, type2 FROM pokemon\nWHERE type2 IS NOT NULL\nLIMIT 5;' },
+  { id: 'in', titre: 'IN', cat: 'FILTRAGE',
+    desc: 'Vérifie si une valeur appartient à une liste. Plus lisible que plusieurs OR. Fonctionne aussi avec une sous-requête.',
+    syntaxe: 'WHERE colonne IN (val1, val2, val3)',
+    exemple: 'SELECT nom FROM pokemon\nWHERE type1 IN (\'Feu\', \'Eau\', \'Plante\');' },
+  { id: 'order', titre: 'ORDER BY', cat: 'TRI',
+    desc: 'Trie les résultats. ASC = croissant (défaut). DESC = décroissant. Peut trier sur plusieurs colonnes.',
+    syntaxe: 'SELECT ... ORDER BY col DESC;\nSELECT ... ORDER BY col1 ASC, col2 DESC;',
+    exemple: 'SELECT nom, vitesse\nFROM pokemon\nORDER BY vitesse DESC\nLIMIT 10;' },
+  { id: 'limit', titre: 'LIMIT / OFFSET', cat: 'TRI',
+    desc: 'LIMIT n : au maximum n lignes retournées. OFFSET k : saute les k premières lignes (pagination).',
+    syntaxe: 'SELECT ... LIMIT n;\nSELECT ... LIMIT n OFFSET k;',
+    exemple: '-- Pokémon 11 à 15 par id\nSELECT nom FROM pokemon\nORDER BY id\nLIMIT 5 OFFSET 10;' },
+  { id: 'count', titre: 'COUNT', cat: 'AGRÉGATS',
+    desc: 'Compte les lignes. COUNT(*) compte tout. COUNT(col) ignore les NULL de cette colonne.',
+    syntaxe: 'SELECT COUNT(*) FROM table;\nSELECT COUNT(col) FROM table;',
+    exemple: 'SELECT COUNT(*) FROM pokemon\nWHERE type1 = \'Eau\';' },
+  { id: 'agg', titre: 'SUM / AVG / MAX / MIN', cat: 'AGRÉGATS',
+    desc: 'Fonctions d\'agrégation sur une colonne numérique. ROUND(val, décimales) pour arrondir.',
+    syntaxe: 'SELECT SUM(col), AVG(col),\n       MAX(col), MIN(col)\nFROM table;',
+    exemple: 'SELECT ROUND(AVG(pv), 1) AS moy_pv,\n       MAX(attaque) AS max_att,\n       MIN(defense) AS min_def\nFROM pokemon;' },
+  { id: 'group', titre: 'GROUP BY', cat: 'AGRÉGATS',
+    desc: 'Regroupe les lignes partageant la même valeur, puis applique des fonctions d\'agrégation à chaque groupe.',
+    syntaxe: 'SELECT col, COUNT(*) AS n\nFROM table\nGROUP BY col\nORDER BY n DESC;',
+    exemple: 'SELECT type1, COUNT(*) AS total\nFROM pokemon\nGROUP BY type1\nORDER BY total DESC;' },
+  { id: 'having', titre: 'HAVING', cat: 'AGRÉGATS',
+    desc: 'Filtre les groupes créés par GROUP BY. WHERE filtre les lignes avant groupage, HAVING filtre les groupes après.',
+    syntaxe: 'SELECT col, COUNT(*) AS n\nFROM table\nGROUP BY col\nHAVING n > valeur;',
+    exemple: 'SELECT type1, COUNT(*) AS total\nFROM pokemon\nGROUP BY type1\nHAVING total > 10;' },
+  { id: 'join', titre: 'JOIN (INNER)', cat: 'JOIN',
+    desc: 'Joint deux tables sur une clé commune. Retourne uniquement les lignes avec correspondance des deux côtés.',
+    syntaxe: 'SELECT a.col, b.col\nFROM tableA a\nJOIN tableB b ON a.id = b.a_id;',
+    exemple: 'SELECT p.nom, c.nom AS capacite\nFROM pokemon p\nJOIN pokemon_capacites pc\n  ON p.id = pc.pokemon_id\nJOIN capacites c\n  ON pc.capacite_id = c.id\nWHERE p.nom = \'Pikachu\';' },
+  { id: 'multi-join', titre: 'Chaîner les JOIN', cat: 'JOIN',
+    desc: 'Plusieurs JOIN s\'enchaînent pour traverser plusieurs tables. Utilise des alias (a, b, c) pour éviter les ambiguïtés.',
+    syntaxe: 'FROM A a\nJOIN B b ON a.id = b.a_id\nJOIN C c ON b.id = c.b_id\nJOIN D d ON c.id = d.c_id;',
+    exemple: 'SELECT DISTINCT p.nom, t.nom AS type_cap\nFROM pokemon p\nJOIN pokemon_capacites pc ON p.id = pc.pokemon_id\nJOIN capacites c ON pc.capacite_id = c.id\nJOIN types t ON c.type_id = t.id\nWHERE p.type1 = \'Eau\'\nLIMIT 10;' },
+  { id: 'distinct', titre: 'DISTINCT', cat: 'JOIN',
+    desc: 'Élimine les doublons dans les résultats. Utile après un JOIN qui peut dupliquer des lignes.',
+    syntaxe: 'SELECT DISTINCT col FROM table;',
+    exemple: 'SELECT DISTINCT type1\nFROM pokemon\nORDER BY type1;' },
+  { id: 'subquery', titre: 'Sous-requête', cat: 'AVANCÉ',
+    desc: 'Requête imbriquée dans WHERE, FROM ou SELECT. La sous-requête est exécutée en premier, son résultat est utilisé par la requête externe.',
+    syntaxe: 'SELECT ...\nWHERE col > (SELECT AVG(col) FROM table);',
+    exemple: 'SELECT nom, attaque\nFROM pokemon\nWHERE attaque > (\n  SELECT AVG(attaque) FROM pokemon\n)\nORDER BY attaque DESC;' },
+  { id: 'correlated', titre: 'Sous-requête corrélée', cat: 'AVANCÉ',
+    desc: 'Sous-requête qui référence la requête externe (via un alias). Recalculée pour chaque ligne de la requête externe.',
+    syntaxe: 'SELECT ... FROM tableA a\nWHERE val > (\n  SELECT AVG(val) FROM tableA b\n  WHERE b.groupe = a.groupe\n);',
+    exemple: 'SELECT nom, pv, type1\nFROM pokemon p\nWHERE pv > (\n  SELECT AVG(pv) FROM pokemon p2\n  WHERE p2.type1 = p.type1\n);' },
+  { id: 'exists', titre: 'EXISTS / NOT EXISTS', cat: 'AVANCÉ',
+    desc: 'EXISTS retourne vrai si la sous-requête produit au moins une ligne. Très efficace pour tester l\'existence sans récupérer les données.',
+    syntaxe: 'SELECT ...\nWHERE EXISTS\n  (SELECT 1 FROM ... WHERE ...)',
+    exemple: 'SELECT p.nom\nFROM pokemon p\nWHERE EXISTS (\n  SELECT 1 FROM pokemon_capacites pc\n  JOIN capacites c ON c.id = pc.capacite_id\n  WHERE pc.pokemon_id = p.id\n    AND c.puissance > 100\n);' },
+  { id: 'not-in', titre: 'NOT IN', cat: 'AVANCÉ',
+    desc: 'Exclut les valeurs présentes dans une liste ou sous-requête. Attention : si la sous-requête retourne un NULL, NOT IN retourne toujours faux — utilise NOT EXISTS dans ce cas.',
+    syntaxe: 'WHERE col NOT IN (SELECT col FROM ...)',
+    exemple: 'SELECT nom FROM pokemon\nWHERE type1 NOT IN (\n  SELECT DISTINCT type1\n  FROM pokemon\n  WHERE est_legendaire = 1\n)\nORDER BY type1;' },
+];
+
+const SCHEMA_TABLES = [
+  { nom: 'pokemon', color: '#22AAFF',
+    cols: [
+      { nom: 'id',             type: 'INTEGER', badge: 'PK' },
+      { nom: 'nom',            type: 'TEXT' },
+      { nom: 'type1',          type: 'TEXT' },
+      { nom: 'type2',          type: 'TEXT',    badge: 'NULL' },
+      { nom: 'pv',             type: 'INTEGER' },
+      { nom: 'attaque',        type: 'INTEGER' },
+      { nom: 'defense',        type: 'INTEGER' },
+      { nom: 'vitesse',        type: 'INTEGER' },
+      { nom: 'est_legendaire', type: 'INTEGER' },
+    ],
+    rels: [],
+  },
+  { nom: 'types', color: '#FF6622',
+    cols: [
+      { nom: 'id',  type: 'INTEGER', badge: 'PK' },
+      { nom: 'nom', type: 'TEXT' },
+    ],
+    rels: [],
+  },
+  { nom: 'capacites', color: '#AA44FF',
+    cols: [
+      { nom: 'id',        type: 'INTEGER', badge: 'PK' },
+      { nom: 'nom',       type: 'TEXT' },
+      { nom: 'type_id',   type: 'INTEGER', badge: 'FK', fkRef: 'types.id' },
+      { nom: 'puissance', type: 'INTEGER', badge: 'NULL' },
+      { nom: 'precision', type: 'INTEGER', badge: 'NULL' },
+      { nom: 'categorie', type: 'TEXT',    badge: 'NULL' },
+    ],
+    rels: ['type_id → types.id'],
+  },
+  { nom: 'pokemon_capacites', color: '#FFEE00',
+    cols: [
+      { nom: 'pokemon_id',  type: 'INTEGER', badge: 'FK', fkRef: 'pokemon.id' },
+      { nom: 'capacite_id', type: 'INTEGER', badge: 'FK', fkRef: 'capacites.id' },
+    ],
+    rels: ['pokemon_id → pokemon.id', 'capacite_id → capacites.id'],
+  },
+];
+
+function allerDocumentation() {
+  document.getElementById('step-mode').style.display = 'none';
+  const overlay = document.getElementById('ecran-intro');
+  overlay.classList.add('fade-out');
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    document.getElementById('ecran-doc').classList.remove('hidden');
+    buildDocReference();
+    buildDocSchema();
+  }, 700);
+}
+
+function retourMenuDepuisDoc() {
+  document.getElementById('ecran-doc').classList.add('hidden');
+  // Reset sandbox
+  document.getElementById('doc-requete').value = '';
+  docFeedback('', '');
+  document.getElementById('doc-results').innerHTML = '';
+  // Retour à l'écran intro, step-mode
+  const overlay = document.getElementById('ecran-intro');
+  overlay.style.display = 'flex';
+  overlay.style.opacity = '1';
+  overlay.classList.remove('fade-out');
+  document.getElementById('step-a').style.display = 'none';
+  document.getElementById('step-b').style.display = 'none';
+  document.getElementById('step-mode').style.display = 'flex';
+}
+
+function switchDocTab(tab) {
+  document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('doc-section-ref').classList.toggle('hidden', tab !== 'ref');
+  document.getElementById('doc-section-schema').classList.toggle('hidden', tab !== 'schema');
+}
+
+function buildDocReference() {
+  const grid = document.getElementById('doc-ref-grid');
+  if (grid.children.length > 0) return;
+  DOC_TOPICS.forEach(topic => {
+    const card = document.createElement('div');
+    card.className = 'topic-card';
+    card.id = 'topic-' + topic.id;
+
+    const header = document.createElement('div');
+    header.className = 'topic-header';
+    const cat = document.createElement('span');
+    cat.className = 'topic-cat';
+    cat.dataset.cat = topic.cat;
+    cat.textContent = topic.cat;
+    const nom = document.createElement('span');
+    nom.className = 'topic-nom';
+    nom.textContent = topic.titre;
+    const arrow = document.createElement('span');
+    arrow.className = 'topic-arrow';
+    arrow.textContent = '›';
+    header.append(cat, nom, arrow);
+    header.addEventListener('click', () => card.classList.toggle('expanded'));
+
+    const body = document.createElement('div');
+    body.className = 'topic-body';
+
+    const desc = document.createElement('div');
+    desc.className = 'topic-desc';
+    desc.textContent = topic.desc;
+
+    const lSyntaxe = document.createElement('div');
+    lSyntaxe.className = 'topic-code-label';
+    lSyntaxe.textContent = 'SYNTAXE';
+    const syntaxe = document.createElement('div');
+    syntaxe.className = 'topic-code';
+    syntaxe.textContent = topic.syntaxe;
+
+    const lExemple = document.createElement('div');
+    lExemple.className = 'topic-code-label';
+    lExemple.textContent = 'EXEMPLE KANTO (cliquer pour essayer)';
+    const exemple = document.createElement('div');
+    exemple.className = 'topic-code exemple';
+    exemple.textContent = topic.exemple;
+    exemple.addEventListener('click', () => essayerExemple(topic.exemple));
+
+    const btnEss = document.createElement('button');
+    btnEss.className = 'btn-essayer';
+    btnEss.textContent = '▶ ESSAYER';
+    btnEss.addEventListener('click', () => essayerExemple(topic.exemple));
+
+    body.append(desc, lSyntaxe, syntaxe, lExemple, exemple, btnEss);
+    card.append(header, body);
+    grid.appendChild(card);
+  });
+}
+
+function buildDocSchema() {
+  const grid = document.getElementById('schema-grid');
+  if (grid.children.length > 0) return;
+  SCHEMA_TABLES.forEach(tbl => {
+    const card = document.createElement('div');
+    card.className = 'schema-table-card';
+    card.style.borderColor = tbl.color + '44';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'schema-table-header';
+    hdr.style.cssText = `background:${tbl.color}18;color:${tbl.color};border-bottom:1px solid ${tbl.color}44`;
+    hdr.textContent = tbl.nom.toUpperCase();
+    card.appendChild(hdr);
+
+    const colsWrap = document.createElement('div');
+    colsWrap.className = 'schema-table-cols';
+    tbl.cols.forEach(c => {
+      const row = document.createElement('div');
+      row.className = 'schema-col-row';
+      const cName = document.createElement('span');
+      cName.className = 'schema-col-name' + (c.badge === 'PK' ? ' pk' : '');
+      cName.textContent = c.nom;
+      const cType = document.createElement('span');
+      cType.className = 'schema-col-type';
+      cType.textContent = c.type;
+      row.append(cName, cType);
+      if (c.badge) {
+        const badge = document.createElement('span');
+        badge.className = 'schema-col-badge ' + c.badge.toLowerCase();
+        badge.textContent = c.badge;
+        if (c.fkRef) badge.title = '→ ' + c.fkRef;
+        row.appendChild(badge);
+      }
+      colsWrap.appendChild(row);
+    });
+    card.appendChild(colsWrap);
+
+    if (tbl.rels.length) {
+      const relNote = document.createElement('div');
+      relNote.className = 'schema-rel-note';
+      relNote.innerHTML = tbl.rels.map(r => `<span>${r}</span>`).join('<br>');
+      card.appendChild(relNote);
+    }
+    grid.appendChild(card);
+  });
+}
+
+function essayerExemple(sql) {
+  document.getElementById('doc-requete').value = sql;
+  document.getElementById('doc-requete').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => document.getElementById('doc-requete').focus(), 300);
+}
+
+function viderSandbox() {
+  document.getElementById('doc-requete').value = '';
+  docFeedback('', '');
+  document.getElementById('doc-results').innerHTML = '';
+  document.getElementById('doc-requete').focus();
+}
+
+async function executerDocSQL() {
+  const req = document.getElementById('doc-requete').value.trim();
+  if (!req) { docFeedback('> SAISIR UNE REQUÊTE SQL', 'err'); return; }
+
+  docFeedback('> EXÉCUTION EN COURS…', 'ok');
+  document.getElementById('doc-results').innerHTML = '';
+  const btn = document.getElementById('btn-doc-exec');
+  btn.disabled = true;
+
+  try {
+    const r = await fetch('/executer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requete: req }),
+    });
+    const d = await r.json();
+    btn.disabled = false;
+
+    if (!d.succes || d.erreur_sql) {
+      docFeedback('> ERREUR SQL : ' + (d.message || d.erreur_sql || 'inconnue'), 'err');
+      return;
+    }
+    const n = d.resultat.total;
+    docFeedback(`> ${n} LIGNE${n !== 1 ? 'S' : ''} RETOURNÉE${n !== 1 ? 'S' : ''}`, 'ok');
+    if (d.resultat.lignes.length) buildDocTable(d.resultat);
+    else {
+      const p = document.createElement('div');
+      p.style.cssText = 'font-size:7px;color:var(--lcd-dim);padding:4px 0';
+      p.textContent = '> AUCUN RÉSULTAT';
+      document.getElementById('doc-results').appendChild(p);
+    }
+  } catch {
+    btn.disabled = false;
+    docFeedback('> ERREUR : SERVEUR INJOIGNABLE', 'err');
+  }
+}
+
+function buildDocTable(payload) {
+  const res = document.getElementById('doc-results');
+  const wrap = document.createElement('div');
+  wrap.className = 'table-lcd-wrap';
+  const table = document.createElement('table');
+  table.className = 'table-lcd';
+  const thead = table.createTHead();
+  const hrow = thead.insertRow();
+  payload.colonnes.forEach(c => {
+    const th = document.createElement('th');
+    th.textContent = c.toUpperCase();
+    hrow.appendChild(th);
+  });
+  const tbody = table.createTBody();
+  payload.lignes.forEach(row => {
+    const tr = tbody.insertRow();
+    row.forEach(val => {
+      const td = tr.insertCell();
+      if (val === null) { td.textContent = 'NULL'; td.className = 'null-v'; }
+      else td.textContent = val;
+    });
+  });
+  wrap.appendChild(table);
+  if (payload.total > payload.lignes.length) {
+    const note = document.createElement('div');
+    note.className = 'table-trunc';
+    note.textContent = `… ${payload.total} LIGNES (LIMITE: ${payload.lignes.length})`;
+    wrap.appendChild(note);
+  }
+  res.appendChild(wrap);
+}
+
+function docFeedback(text, type) {
+  const el = document.getElementById('doc-feedback');
+  if (!text) { el.className = ''; el.textContent = ''; return; }
+  el.textContent = text;
+  el.className = `vis ${type}`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// POKÉBALL – aide rapide
+// ══════════════════════════════════════════════════════════════════════════════
+function toggleHelp() {
+  document.getElementById('pokeball-help').classList.toggle('hidden');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SON 8-BIT (Web Audio API)
+// ══════════════════════════════════════════════════════════════════════════════
+let _audioCtx  = null;
+let soundEnabled = true;
+
+function _getCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return _audioCtx;
+}
+
+function _bip(freq, dur, type = 'square', vol = 0.08, delay = 0) {
+  if (!soundEnabled) return;
+  try {
+    const ctx  = _getCtx();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + delay;
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.start(t);
+    osc.stop(t + dur + 0.01);
+  } catch { /* silencieux si contexte audio bloqué */ }
+}
+
+function soundSucces() {
+  // Mélodie montante : Do Mi Sol
+  _bip(523, 0.10, 'square', 0.07, 0.00);
+  _bip(659, 0.10, 'square', 0.07, 0.11);
+  _bip(784, 0.22, 'square', 0.09, 0.22);
+}
+
+function soundErreur() {
+  // Bip descendant
+  _bip(330, 0.10, 'square', 0.07, 0.00);
+  _bip(220, 0.18, 'square', 0.07, 0.10);
+}
+
+function soundChangementActe() {
+  // Petite fanfare : Do Mi Sol Do+
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((n, i) => _bip(n, 0.14, 'square', 0.07, i * 0.13));
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  document.getElementById('sound-btn').textContent = soundEnabled ? '🔊' : '🔇';
+}
+</script>
+</body>
+</html>

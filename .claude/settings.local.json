@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -)",
+      "Bash(python -m py_compile server.py)",
+      "Bash(python -m py_compile quetes.py)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":5000\")",
+      "Bash(findstr LISTENING)",
+      "Bash(taskkill //PID 6288 //F)",
+      "Bash(python server.py)",
+      "Bash(curl -s http://localhost:5000/quete/1)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s http://localhost:5000/quete/35)",
+      "Bash(curl -s -X POST http://localhost:5000/valider -H \"Content-Type: application/json\" -d \"{\\\\\"numero\\\\\": 28, \\\\\"requete\\\\\": \\\\\"SELECT DISTINCT type1 FROM pokemon WHERE type1 NOT IN \\(SELECT DISTINCT type1 FROM pokemon WHERE est_legendaire = 1\\) ORDER BY type1\\\\\"}\")",
+      "Bash(taskkill //PID 6248 //F)",
+      "Bash(curl -s http://localhost:5000/quete/3)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('acte:', d['acte'], '| zone:', d['zone'], '| last of act1:', d['numero']==3\\)\")",
+      "Bash(curl -s -X POST http://localhost:5000/valider -H \"Content-Type: application/json\" -d \"{\\\\\"numero\\\\\":35,\\\\\"requete\\\\\":\\\\\"SELECT p.nom, \\(p.pv + p.attaque + p.defense + p.vitesse\\) AS score, COUNT\\(pc.capacite_id\\) AS nb_cap FROM pokemon p JOIN pokemon_capacites pc ON p.id = pc.pokemon_id GROUP BY p.id ORDER BY score DESC, nb_cap DESC LIMIT 5\\\\\"}\")",
+      "Bash(python -c \"from quetes import QUESTS; [print\\(f'Q{q[\\\\\"numero\\\\\"]:02d}: pid={q[\\\\\"pokemon_id\\\\\"]}'\\) for q in QUESTS]\")",
+      "Bash(awk '{print $5}')",
+      "Bash(xargs -I{} taskkill //PID {} //F)",
+      "Bash(curl -s http://localhost:5000/quete/17)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Q17 pokemon_id:', d.get\\('pokemon_id'\\)\\)\")",
+      "Bash(curl -s http://localhost:5000/pokemon_info/92)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Q3 pokemon_id:', d.get\\('pokemon_id'\\)\\)\")",
+      "Bash(curl -s -X POST http://localhost:5000/valider -H \"Content-Type: application/json\" -d \"{\\\\\"numero\\\\\":17,\\\\\"requete\\\\\":\\\\\"SELECT c.nom, c.categorie, c.puissance FROM pokemon p JOIN pokemon_capacites pc ON p.id = pc.pokemon_id JOIN capacites c ON c.id = pc.capacite_id WHERE p.nom = 'Fantominus'\\\\\"}\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('succes:', d['succes'], '| lignes:', len\\(d['resultat']['lignes']\\), '| attendu:', d['attendu']\\)\")",
+      "Bash(python -c \"from arcade import generer_defi; import json; d=generer_defi\\(\\); print\\(json.dumps\\({k:v for k,v in d.items\\(\\) if k!='solution'}, ensure_ascii=False, indent=2\\)\\)\")",
+      "Bash(python -c \"from server import app; print\\('server imports OK'\\)\")",
+      "Bash(python -c \"\nimport ast, sys\nwith open\\('C:/Users/els59/OneDrive/Documents/projet/sqlemon/server.py'\\) as f:\n    src = f.read\\(\\)\n# Just check it compiles\ncompile\\(src, 'server.py', 'exec'\\)\nprint\\('server.py OK'\\)\n\" 2>&1)"
+    ]
+  }
+}
