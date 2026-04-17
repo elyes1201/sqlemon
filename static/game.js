@@ -32,8 +32,8 @@ const BACKGROUNDS = [
   '/static/backgrounds/mont_selenite.png',
   '/static/backgrounds/celadopole.png',
   '/static/backgrounds/lavanville.png',
-  '/static/backgrounds/carmin_sur_mer.png',
-  "/static/backgrounds/cramois'ile.png",
+  '/static/backgrounds/carmin.png',
+  '/static/backgrounds/cramois_ile.png',
   '/static/backgrounds/azuria.png',
   '/static/backgrounds/plateau_indigo.png',
 ];
