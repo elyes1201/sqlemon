@@ -15,7 +15,7 @@ _arcade_store: dict = {}
 # Statistiques arcade par joueur (clé = joueur_id)
 _arcade_stats: dict = {}
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, "sqlemon.db")
 
@@ -58,10 +58,6 @@ def rows_to_dict(rows, cols, limit=50):
 def root():
     return send_from_directory(BASE_DIR, "index.html")
 
-
-@app.route("/static/<path:filename>")
-def static_files(filename):
-    return send_from_directory(os.path.join(BASE_DIR, "static"), filename)
 
 
 @app.route("/quete/<int:numero>")
