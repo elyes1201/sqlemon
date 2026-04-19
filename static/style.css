@@ -916,10 +916,10 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
   max-width: 560px;
   width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   animation: lcd-fadein .4s ease;
   border-radius: 8px;
 }
@@ -1011,31 +1011,40 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
 /* Invite de sélection */
 .starter-prompt { font-family: var(--fn); font-size: 7px; color: var(--gb-lightest); line-height: 2; }
 
+/* Écran choix starter */
+#step-b {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+#step-b .btn-intro { align-self: center; }
+
 /* Cartes starters */
-.starters-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.starters-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
 .starter-card {
   border: 2px solid #333;
   border-radius: 8px;
-  padding: 10px 8px;
+  padding: 8px 6px;
   cursor: pointer;
   background: #0A0A14;
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 4px;
   transition: border-color .15s, transform .1s;
 }
 .starter-card:hover    { transform: translateY(-2px); border-color: var(--pdx-red); box-shadow: 0 4px 12px rgba(204,0,0,0.3); }
 .starter-card.selected { border-color: var(--pdx-red-light); background: #1A0000; box-shadow: 0 0 16px rgba(204,0,0,0.4); }
 
-.s-nom   { font-size: 7px; color: var(--gb-lightest); text-align: center; letter-spacing: 1px; }
+.s-nom   { font-size: 6px; color: var(--gb-lightest); text-align: center; letter-spacing: 1px; }
 .s-type  { font-size: 5px; color: var(--gb-light); text-align: center; }
-.s-stats { display: flex; flex-direction: column; gap: 3px; }
+.s-stats { display: flex; flex-direction: column; gap: 2px; }
 .s-stat-row { display: flex; align-items: center; gap: 4px; }
 .s-stat-name { font-size: 4px; color: var(--gb-light); width: 20px; flex-shrink: 0; }
 .s-stat-bar-bg { flex: 1; height: 3px; background: #222; overflow: hidden; border-radius: 2px; }
 .s-stat-bar { height: 100%; background: var(--pdx-red); transition: width .4s ease; border-radius: 2px; }
 .s-stat-val { font-size: 4px; color: var(--gb-light); width: 18px; text-align: right; }
 
-.starter-sprite-wrap { display: flex; justify-content: center; align-items: center; height: 52px; }
-.starter-sprite { width: 48px; height: 48px; image-rendering: pixelated; transition: transform .3s; }
+.starter-sprite-wrap { display: flex; justify-content: center; align-items: center; height: 44px; }
+.starter-sprite { width: 40px; height: 40px; image-rendering: pixelated; transition: transform .3s; }
 .starter-card:hover    .starter-sprite { transform: scale(1.15) translateY(-3px); }
 .starter-card.selected .starter-sprite { animation: starter-bounce .5s ease infinite alternate; }
 @keyframes starter-bounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }
