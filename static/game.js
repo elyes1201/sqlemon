@@ -45,45 +45,29 @@ function changeBg(acteNum) {
 }
 
 // ── Musique de fond ───────────────────────────────────────────────────────────
-const BGM_BASE = 'https://play.pokemonshowdown.com/audio/bgm/';
-const BGM_TRACKS = {
-  1: 'pallet.mp3',
-  2: 'viridianforest.mp3',
-  3: 'mtmoon.mp3',
-  4: 'cerulean.mp3',
-  5: 'lavender.mp3',
-  6: 'vermilion.mp3',
-  7: 'cinnabar.mp3',
-  8: 'cerulean.mp3',
-  9: 'indigo.mp3',
+const MUSIQUES = {
+  1: 'https://play.pokemonshowdown.com/audio/bgm/pallet.mp3',
+  2: 'https://play.pokemonshowdown.com/audio/bgm/viridianforest.mp3',
+  3: 'https://play.pokemonshowdown.com/audio/bgm/mtmoon.mp3',
+  4: 'https://play.pokemonshowdown.com/audio/bgm/cerulean.mp3',
+  5: 'https://play.pokemonshowdown.com/audio/bgm/lavender.mp3',
+  6: 'https://play.pokemonshowdown.com/audio/bgm/vermilion.mp3',
+  7: 'https://play.pokemonshowdown.com/audio/bgm/cinnabar.mp3',
+  8: 'https://play.pokemonshowdown.com/audio/bgm/cerulean.mp3',
+  9: 'https://play.pokemonshowdown.com/audio/bgm/indigo.mp3',
 };
+let audio = null;
+let soundEnabled = true;
+let acteActuel = 0;
 
-const _bgmAudio = document.createElement('audio');
-_bgmAudio.loop   = true;
-_bgmAudio.volume = 0.3;
-let _bgmCurrentKey = null;
-let _bgmStarted    = false; // premier clic requis (contrainte navigateur)
-
-function playBgm(acteNum) {
-  const track = BGM_TRACKS[acteNum];
-  if (!track || _bgmCurrentKey === acteNum) return;
-  _bgmCurrentKey = acteNum;
-  _bgmAudio.pause();
-  _bgmAudio.src = BGM_BASE + track;
-  _bgmAudio.load();
-  if (_bgmStarted) _bgmAudio.play().catch(() => {});
-}
-
-// Démarre la musique au premier clic (contrainte autoplay navigateur)
-document.addEventListener('click', () => {
-  if (_bgmStarted) return;
-  _bgmStarted = true;
-  if (_bgmAudio.src) _bgmAudio.play().catch(() => {});
-}, { once: false });
-
-function _updateSoundBtn() {
-  const btn = document.getElementById('sound-btn');
-  if (btn) btn.textContent = _bgmAudio.muted ? '🔇' : '🔊';
+function jouerMusique(acte) {
+  if (!soundEnabled || acte === acteActuel) return;
+  acteActuel = acte;
+  if (audio) { audio.pause(); audio = null; }
+  audio = new Audio(MUSIQUES[acte]);
+  audio.loop = true;
+  audio.volume = 0.3;
+  audio.play().catch(() => {});
 }
 
 // ── État ─────────────────────────────────────────────────────────────────────
@@ -113,8 +97,8 @@ let joueurId = null;
 // ── Démarrage ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Restaurer préférence son
-  if (localStorage.getItem('sqlemon_sound') === 'off') _bgmAudio.muted = true;
-  _updateSoundBtn();
+  if (localStorage.getItem('sqlemon_sound') === 'off') soundEnabled = false;
+  document.getElementById('sound-btn').textContent = soundEnabled ? '🔊' : '🔇';
   lancerIntro();
 });
 
@@ -484,7 +468,7 @@ function majActBar() {
   const acteActuel = getActe(quete).num;
   document.body.dataset.acte = acteActuel;
   changeBg(acteActuel);
-  playBgm(acteActuel);
+  jouerMusique(acteActuel);
   ACTES.forEach(a => {
     const seg = document.getElementById(`act-seg-${a.num}`);
     if (!seg) return;
@@ -1273,7 +1257,6 @@ function toggleHelp() {
 
 // ── Son 8-bit (Web Audio API) ─────────────────────────────────────────────────
 let _audioCtx  = null;
-let soundEnabled = true;
 
 function _getCtx() {
   if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1316,7 +1299,7 @@ function soundChangementActe() {
 
 function toggleSound() {
   soundEnabled = !soundEnabled;
-  _bgmAudio.muted = !soundEnabled;
-  localStorage.setItem('sqlemon_sound', soundEnabled ? 'on' : 'off');
-  _updateSoundBtn();
+  document.getElementById('sound-btn').textContent = soundEnabled ? '🔊' : '🔇';
+  if (!soundEnabled && audio) audio.pause();
+  else if (soundEnabled && audio) audio.play().catch(() => {});
 }
