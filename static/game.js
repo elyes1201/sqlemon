@@ -44,88 +44,46 @@ function changeBg(acteNum) {
   document.body.className = 'acte-' + acteNum;
 }
 
-// ── AudioManager — musique de fond ────────────────────────────────────────────
-const AudioManager = {
-  BASE: 'https://play.pokemonshowdown.com/audio/bgm/',
-  TRACKS: {
-    0: 'title.mp3',         // écran titre
-    1: 'pallet.mp3',
-    2: 'viridianforest.mp3',
-    3: 'mtmoon.mp3',
-    4: 'cerulean.mp3',
-    5: 'lavender.mp3',
-    6: 'vermilion.mp3',
-    7: 'cinnabar.mp3',
-    8: 'cerulean.mp3',
-    9: 'indigo.mp3',
-  },
-  VOLUME:  0.3,
-  FADE_MS: 1000,
-
-  _current:    null,
-  _currentKey: null,
-
-  init() {
-    if (localStorage.getItem('sqlemon_sound') === 'off') {
-      soundEnabled = false;
-    }
-    _updateSoundBtn();
-  },
-
-  play(key) {
-    if (this._currentKey === key) return;
-    this._currentKey = key;
-
-    const next = new Audio(this.BASE + (this.TRACKS[key] || ''));
-    next.loop   = true;
-    next.volume = 0;
-    next.play().catch(() => {});  // silencieux si autoplay bloqué
-
-    const prev = this._current;
-    this._current = next;
-
-    if (soundEnabled) {
-      this._fade(next, 0, this.VOLUME, this.FADE_MS);
-      if (prev) this._fade(prev, prev.volume, 0, this.FADE_MS,
-        () => { prev.pause(); prev.src = ''; });
-    } else {
-      if (prev) { prev.pause(); prev.src = ''; }
-    }
-  },
-
-  syncVolume() {
-    localStorage.setItem('sqlemon_sound', soundEnabled ? 'on' : 'off');
-    if (!this._current) return;
-    if (soundEnabled) {
-      this._fade(this._current, this._current.volume, this.VOLUME, 500);
-    } else {
-      this._fade(this._current, this._current.volume, 0, 500);
-    }
-  },
-
-  _fade(audio, from, to, ms, onDone) {
-    if (audio._fadeTimer) clearInterval(audio._fadeTimer);
-    const STEPS = 20;
-    const step_ms = ms / STEPS;
-    const delta   = (to - from) / STEPS;
-    let   step    = 0;
-    audio.volume  = Math.max(0, Math.min(1, from));
-    audio._fadeTimer = setInterval(() => {
-      step++;
-      audio.volume = Math.max(0, Math.min(1, from + delta * step));
-      if (step >= STEPS) {
-        clearInterval(audio._fadeTimer);
-        audio._fadeTimer = null;
-        audio.volume = Math.max(0, Math.min(1, to));
-        if (onDone) onDone();
-      }
-    }, step_ms);
-  },
+// ── Musique de fond ───────────────────────────────────────────────────────────
+const BGM_BASE = 'https://play.pokemonshowdown.com/audio/bgm/';
+const BGM_TRACKS = {
+  1: 'pallet.mp3',
+  2: 'viridianforest.mp3',
+  3: 'mtmoon.mp3',
+  4: 'cerulean.mp3',
+  5: 'lavender.mp3',
+  6: 'vermilion.mp3',
+  7: 'cinnabar.mp3',
+  8: 'cerulean.mp3',
+  9: 'indigo.mp3',
 };
+
+const _bgmAudio = document.createElement('audio');
+_bgmAudio.loop   = true;
+_bgmAudio.volume = 0.3;
+let _bgmCurrentKey = null;
+let _bgmStarted    = false; // premier clic requis (contrainte navigateur)
+
+function playBgm(acteNum) {
+  const track = BGM_TRACKS[acteNum];
+  if (!track || _bgmCurrentKey === acteNum) return;
+  _bgmCurrentKey = acteNum;
+  _bgmAudio.pause();
+  _bgmAudio.src = BGM_BASE + track;
+  _bgmAudio.load();
+  if (_bgmStarted) _bgmAudio.play().catch(() => {});
+}
+
+// Démarre la musique au premier clic (contrainte autoplay navigateur)
+document.addEventListener('click', () => {
+  if (_bgmStarted) return;
+  _bgmStarted = true;
+  if (_bgmAudio.src) _bgmAudio.play().catch(() => {});
+}, { once: false });
 
 function _updateSoundBtn() {
   const btn = document.getElementById('sound-btn');
-  if (btn) btn.textContent = soundEnabled ? '🔊' : '🔇';
+  if (btn) btn.textContent = _bgmAudio.muted ? '🔇' : '🔊';
 }
 
 // ── État ─────────────────────────────────────────────────────────────────────
@@ -154,7 +112,9 @@ let joueurId = null;
 
 // ── Démarrage ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  AudioManager.init();
+  // Restaurer préférence son
+  if (localStorage.getItem('sqlemon_sound') === 'off') _bgmAudio.muted = true;
+  _updateSoundBtn();
   lancerIntro();
 });
 
@@ -174,7 +134,6 @@ const TEXTE_INTRO = "Le Professeur Chen a besoin de ton aide. Des Pokémon ont d
 
 function lancerIntro() {
   changeBg(1);
-  AudioManager.play(0); // title.mp3
   typewriterEffect(document.getElementById('prof-text'), TEXTE_INTRO, 28, () => {
     document.getElementById('pseudo-wrap').style.display = 'flex';
     document.getElementById('btn-commencer').style.display = 'block';
@@ -525,7 +484,7 @@ function majActBar() {
   const acteActuel = getActe(quete).num;
   document.body.dataset.acte = acteActuel;
   changeBg(acteActuel);
-  AudioManager.play(acteActuel); // fondu enchaîné vers la musique de l'acte
+  playBgm(acteActuel);
   ACTES.forEach(a => {
     const seg = document.getElementById(`act-seg-${a.num}`);
     if (!seg) return;
@@ -552,6 +511,14 @@ function getActe(numQuete) {
   return ACTES.find(a => numQuete >= a.first && numQuete <= a.last) || ACTES[0];
 }
 
+// Retourne le numéro de la première quête non encore réussie (= frontière accessible)
+function maxAccessible() {
+  for (let i = 0; i < TOTAL; i++) {
+    if (scores[i] !== true) return i + 1;
+  }
+  return TOTAL;
+}
+
 // ── Pips de progression ───────────────────────────────────────────────────────
 function buildPips() {
   const wrap = document.getElementById('prog-pips');
@@ -561,25 +528,31 @@ function buildPips() {
     d.id = `pip-${i}`;
     d.title = `Quête ${i}`;
     d.style.cssText = 'width:7px;height:7px;';
-    d.addEventListener('click', () => chargerQuete(i));
+    d.addEventListener('click', () => { if (i <= maxAccessible()) chargerQuete(i); });
     wrap.appendChild(d);
   }
 }
 
 function majPips() {
   let ok = 0, fail = 0;
+  const accessible = maxAccessible();
   for (let i = 1; i <= TOTAL; i++) {
+    const pip = document.getElementById(`pip-${i}`);
     const cl = ['pip'];
     if (i === quete)           cl.push('p-active');
     if (scores[i-1] === true)  { cl.push('p-ok');   ok++; }
     if (scores[i-1] === false) { cl.push('p-fail');  fail++; }
-    document.getElementById(`pip-${i}`).className = cl.join(' ');
+    pip.className = cl.join(' ');
+    // Feedback visuel sur les pips verrouillés
+    pip.style.opacity = (i > accessible) ? '0.3' : '';
+    pip.style.cursor  = (i > accessible) ? 'default' : '';
   }
   document.getElementById('ss-num').textContent  = String(quete).padStart(2,'0');
   document.getElementById('sc-ok').textContent   = ok;
   document.getElementById('sc-fail').textContent = fail;
   document.getElementById('btn-prev').disabled = (quete === 1);
-  document.getElementById('btn-next').disabled = (quete === TOTAL);
+  // SUIV ▶ désactivé si quête non réussie
+  document.getElementById('btn-next').disabled = (quete === TOTAL) || (scores[quete - 1] !== true);
   majActBar();
 }
 
@@ -1343,6 +1316,7 @@ function soundChangementActe() {
 
 function toggleSound() {
   soundEnabled = !soundEnabled;
+  _bgmAudio.muted = !soundEnabled;
+  localStorage.setItem('sqlemon_sound', soundEnabled ? 'on' : 'off');
   _updateSoundBtn();
-  AudioManager.syncVolume();
 }
