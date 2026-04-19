@@ -99,9 +99,9 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
   flex-direction: row;
   width: 100%;
   max-width: 840px;
-  min-height: 480px;
+  height: clamp(480px, 80vh, 640px);
   position: relative;
-  overflow: visible;
+  overflow: hidden;
 
   /* Plastique rouge Pokédex avec dégradé */
   background: linear-gradient(155deg,
@@ -171,13 +171,15 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
   z-index: 2;
   box-shadow: none;
   border-radius: 0;
+  overflow: hidden;
+  min-height: 0;
 }
 
 /* Ordre des enfants */
 .leds                { order: 0; }
 .screen-sprite-frame { order: 1; }
 .screen-small-frame  { order: 2; }
-.screen-frame        { order: 3; flex: 1; }
+.screen-frame        { order: 3; flex: 1; min-height: 0; overflow: hidden; }
 
 /* ── CHARNIÈRE VERTICALE ────────────────────────────────────────────────── */
 .hinge {
@@ -216,6 +218,8 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
   box-shadow: none;
   border-radius: 0;
   border-top: none;
+  overflow: hidden;
+  min-height: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -717,11 +721,11 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
 /* ── Résultats ───────────────────────────────────────────────────────────── */
 .results-zone {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
   overflow-y: auto;
-  max-height: 160px;
   scrollbar-width: thin;
   scrollbar-color: #333 transparent;
 }
@@ -911,6 +915,8 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
   padding: 32px;
   max-width: 560px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -1406,8 +1412,13 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
     flex-direction: column;
     border-radius: 22px 22px 56px 22px;
     max-width: 100%;
+    height: auto;
     min-height: unset;
+    max-height: none;
+    overflow: visible;
   }
+  .half-left, .half-right { overflow: visible; }
+  .results-zone { max-height: 200px; }
   .pokedex::after { top: 14px; left: 14px; }
   .half-left { width: 100%; padding: 72px 14px 14px; }
   .half-right { padding: 14px; }
