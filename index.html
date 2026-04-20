@@ -19,6 +19,18 @@
 <!-- Bouton son -->
 <button id="sound-btn" title="Son" onclick="toggleSound()">🔊</button>
 
+<!-- Bouton SAC (badges) — visible uniquement pendant le jeu -->
+<button id="btn-sac" class="hidden" title="Badges" onclick="afficherBadges()">🎖️ SAC</button>
+
+<!-- Popup badges -->
+<div id="popup-badges" class="hidden">
+  <div class="badges-box">
+    <div class="badges-title">&gt; TES BADGES</div>
+    <div id="badges-list" class="badges-list"></div>
+    <button class="btn-badges-close" onclick="fermerBadges()">✕ FERMER</button>
+  </div>
+</div>
+
 <!-- Pokéball aide rapide -->
 <div id="pokeball-wrap">
   <div id="pokeball-help" class="hidden">

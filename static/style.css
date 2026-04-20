@@ -1422,6 +1422,78 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
   padding: 4px 0 2px;
 }
 
+/* ── Bouton SAC ──────────────────────────────────────────────────────────── */
+#btn-sac {
+  position: fixed; top: 12px; right: 54px; z-index: 90;
+  background: rgba(0,0,0,0.6);
+  border: 2px solid #333;
+  border-radius: 6px;
+  color: var(--gb-light); font-family: var(--fn); font-size: 6px;
+  height: 32px; padding: 0 8px; cursor: pointer;
+  letter-spacing: 1px;
+  transition: border-color .1s;
+  display: flex; align-items: center; gap: 4px;
+}
+#btn-sac:hover { border-color: var(--pdx-red); }
+#btn-sac.hidden { display: none; }
+
+/* ── Popup badges ────────────────────────────────────────────────────────── */
+#popup-badges {
+  position: fixed; inset: 0; z-index: 180;
+  background: rgba(5,5,10,0.88);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  animation: lcd-fadein .25s ease;
+}
+#popup-badges.hidden { display: none; }
+
+.badges-box {
+  background: #0A0A10;
+  border: 3px solid var(--pdx-red-dark);
+  box-shadow: inset 0 0 0 1px #1A0000, 0 0 30px rgba(204,0,0,0.2), 0 8px 32px rgba(0,0,0,0.7);
+  border-radius: 8px;
+  padding: 24px 28px;
+  max-width: 360px; width: 100%;
+  display: flex; flex-direction: column; gap: 12px;
+  position: relative;
+}
+.badges-box::before, .badges-box::after {
+  content: '■'; position: absolute;
+  font-size: 8px; color: var(--pdx-red-dark); pointer-events: none;
+}
+.badges-box::before { top: 5px; left: 8px; }
+.badges-box::after  { top: 5px; right: 8px; }
+
+.badges-title {
+  font-family: var(--fn); font-size: 8px;
+  color: var(--gb-lightest); letter-spacing: 2px;
+  text-align: center; padding-bottom: 8px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.badges-list {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.badge-row {
+  font-family: var(--fn); font-size: 7px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.badge-row span { font-size: 8px; flex-shrink: 0; }
+.badge-ok  { color: var(--lcd-on); background: #001108; border: 1px solid #1a3a1a; text-shadow: 0 0 5px rgba(0,255,100,0.3); }
+.badge-non { color: #444; background: #0A0A0A; border: 1px solid #1a1a1a; }
+
+.btn-badges-close {
+  font-family: var(--fn); font-size: 6px;
+  background: transparent; border: 2px solid #333; border-radius: 6px;
+  color: var(--gb-light); padding: 8px;
+  cursor: pointer; letter-spacing: 2px; text-align: center;
+  transition: border-color .1s, color .1s; margin-top: 4px;
+}
+.btn-badges-close:hover { border-color: var(--pdx-red); color: var(--gb-lightest); }
+
 /* ── Bouton son ──────────────────────────────────────────────────────────── */
 #sound-btn {
   position: fixed; top: 12px; right: 12px; z-index: 90;

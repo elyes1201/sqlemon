@@ -282,6 +282,28 @@ def arcade_stats():
     return jsonify(st)
 
 
+@app.route("/badge", methods=["POST"])
+def ajouter_badge():
+    import json as _json
+    data      = request.get_json(silent=True) or {}
+    joueur_id = data.get("joueur_id")
+    badge     = (data.get("badge") or "").strip()
+    if not joueur_id or not badge:
+        return jsonify({"erreur": "Données manquantes"}), 400
+    conn = open_db_rw()
+    row  = conn.execute("SELECT badges FROM joueur WHERE id = ?", (joueur_id,)).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"erreur": "Joueur introuvable"}), 404
+    badges = _json.loads(row["badges"] or "[]")
+    if badge not in badges:
+        badges.append(badge)
+    conn.execute("UPDATE joueur SET badges = ? WHERE id = ?", (_json.dumps(badges), joueur_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"succes": True, "badges": badges})
+
+
 @app.route("/sauvegarder", methods=["POST"])
 def sauvegarder():
     import json as _json
@@ -307,7 +329,7 @@ def charger(joueur_id):
     import json as _json
     conn = open_db()
     row  = conn.execute(
-        "SELECT id, pseudo, starter_id, quete_actuelle, progression FROM joueur WHERE id = ?",
+        "SELECT id, pseudo, starter_id, quete_actuelle, progression, badges FROM joueur WHERE id = ?",
         (joueur_id,),
     ).fetchone()
     conn.close()
@@ -316,6 +338,7 @@ def charger(joueur_id):
     d = dict(row)
     if d["progression"]:
         d["progression"] = _json.loads(d["progression"])
+    d["badges"] = _json.loads(d["badges"] or "[]")
     return jsonify(d)
 
 
@@ -324,7 +347,7 @@ def sauvegarde_pseudo(pseudo):
     import json as _json
     conn = open_db()
     row  = conn.execute(
-        """SELECT id, pseudo, starter_id, quete_actuelle, progression
+        """SELECT id, pseudo, starter_id, quete_actuelle, progression, badges
            FROM joueur WHERE pseudo = ? AND progression IS NOT NULL
            ORDER BY id DESC LIMIT 1""",
         (pseudo,),
@@ -335,6 +358,7 @@ def sauvegarde_pseudo(pseudo):
     d = dict(row)
     if d["progression"]:
         d["progression"] = _json.loads(d["progression"])
+    d["badges"] = _json.loads(d["badges"] or "[]")
     d["trouve"] = True
     return jsonify(d)
 

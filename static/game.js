@@ -2,6 +2,13 @@
 const TOTAL = 35;
 const SPRITE_BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
 
+// Badges Kanto : acte → nom du badge
+const BADGES_ACTES = {
+  2: 'Roc', 3: 'Cascade', 4: 'Foudre', 5: 'Arc-en-ciel',
+  6: 'Âme', 7: 'Marais',  8: 'Volcan', 9: 'Terre',
+};
+const TOUS_BADGES = ['Roc', 'Cascade', 'Foudre', 'Arc-en-ciel', 'Âme', 'Marais', 'Volcan', 'Terre'];
+
 // Définition des 9 actes (premier/dernier quest, label court, message de transition)
 const ACTES = [
   { num:1, label:"BOURG",    first:1,  last:3,  zone:"Bourg Palette",  color:"#306230",
@@ -114,6 +121,9 @@ let arcadeNiveau    = 0;   // 0=aléatoire, 1-4=niveau fixe
 // ID joueur (pour /arcade/stats)
 let joueurId = null;
 
+// Badges obtenus
+let badges = [];
+
 // ── Démarrage ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Restaurer préférence son
@@ -207,6 +217,7 @@ function chargerSauvegarde() {
   selectedStarterId = _saveData.starter_id;
   if (Array.isArray(prog.scores)) scores = prog.scores;
   if (prog.quete) quete = prog.quete;
+  if (Array.isArray(_saveData.badges)) badges = _saveData.badges;
   gameMode = 'histoire';
   demarrerJeu();
 }
@@ -226,6 +237,35 @@ async function sauvegarder() {
       body: JSON.stringify({ joueur_id: joueurId, quete, scores }),
     });
   } catch { /* silencieux */ }
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+async function gagnerBadge(acteNum) {
+  const nomBadge = BADGES_ACTES[acteNum];
+  if (!nomBadge || !joueurId || badges.includes(nomBadge)) return;
+  badges.push(nomBadge);
+  try {
+    await fetch('/badge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ joueur_id: joueurId, badge: nomBadge }),
+    });
+  } catch { /* silencieux */ }
+}
+
+function afficherBadges() {
+  const list = document.getElementById('badges-list');
+  list.innerHTML = TOUS_BADGES.map(b => {
+    const obtenu = badges.includes(b);
+    return `<div class="badge-row ${obtenu ? 'badge-ok' : 'badge-non'}">` +
+           `<span>${obtenu ? '✓' : '✗'}</span>Badge ${b}` +
+           `</div>`;
+  }).join('');
+  document.getElementById('popup-badges').classList.remove('hidden');
+}
+
+function fermerBadges() {
+  document.getElementById('popup-badges').classList.add('hidden');
 }
 
 async function allerEtapeB(mode) {
@@ -351,6 +391,7 @@ function demarrerJeu() {
     document.getElementById('fin-pseudo').textContent  = joueurPseudo.toUpperCase();
     document.getElementById('fin-starter').textContent = joueurStarterNom.toUpperCase();
 
+    document.getElementById('btn-sac').classList.remove('hidden');
     buildActBar();
     buildPips();
     chargerQuete(quete); // utilise la quête sauvegardée ou 1 par défaut
@@ -809,6 +850,7 @@ function nextQuest() {
 // ── Transition entre actes ───────────────────────────────────────────────────
 function afficherTransition(acteTermine, prochaineQuete) {
   soundChangementActe();
+  gagnerBadge(acteTermine.num);
   transitionNextQ = prochaineQuete;
   const ok = scores.filter(s => s === true).length;
   document.getElementById('tr-badge').textContent = `ACTE ${acteTermine.num} TERMINÉ`;
