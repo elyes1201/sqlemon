@@ -59,16 +59,36 @@ const MUSIQUES = {
 let audio = null;
 let soundEnabled = true;
 let acteActuel = 0;
+let _bgmStarted = false; // true après le premier clic (contrainte autoplay navigateur)
+
+function _playAudio() {
+  if (!audio || !soundEnabled) return;
+  audio.play()
+    .then(() => console.log('[BGM] Lecture :', audio.src.split('/').pop()))
+    .catch(e => console.warn('[BGM] Lecture bloquée :', e.message));
+}
 
 function jouerMusique(acte) {
-  if (!soundEnabled || acte === acteActuel) return;
+  if (!MUSIQUES[acte]) return;
+  // Déjà en cours sur ce même acte → ne rien faire
+  if (acte === acteActuel && audio && !audio.paused) return;
   acteActuel = acte;
   if (audio) { audio.pause(); audio = null; }
+  if (!soundEnabled) return;
   audio = new Audio(MUSIQUES[acte]);
-  audio.loop = true;
+  audio.loop   = true;
   audio.volume = 0.3;
-  audio.play().catch(() => {});
+  // Joue immédiatement si l'utilisateur a déjà interagi, sinon attend son clic
+  if (_bgmStarted) _playAudio();
 }
+
+// Démarre la musique au premier clic (contrainte autoplay navigateur)
+document.addEventListener('click', () => {
+  if (_bgmStarted) return;
+  _bgmStarted = true;
+  console.log('[BGM] Premier clic détecté — démarrage autoplay');
+  if (audio && soundEnabled) _playAudio();
+});
 
 // ── État ─────────────────────────────────────────────────────────────────────
 let quete    = 1;
@@ -1300,6 +1320,17 @@ function soundChangementActe() {
 function toggleSound() {
   soundEnabled = !soundEnabled;
   document.getElementById('sound-btn').textContent = soundEnabled ? '🔊' : '🔇';
-  if (!soundEnabled && audio) audio.pause();
-  else if (soundEnabled && audio) audio.play().catch(() => {});
+  if (!soundEnabled) {
+    if (audio) audio.pause();
+  } else {
+    if (audio) {
+      // Reprend le morceau en cours là où il s'était arrêté
+      _playAudio();
+    } else if (acteActuel) {
+      // audio a été libéré — recrée pour l'acte courant
+      audio = new Audio(MUSIQUES[acteActuel]);
+      audio.loop = true; audio.volume = 0.3;
+      _playAudio();
+    }
+  }
 }
