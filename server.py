@@ -282,6 +282,63 @@ def arcade_stats():
     return jsonify(st)
 
 
+@app.route("/sauvegarder", methods=["POST"])
+def sauvegarder():
+    import json as _json
+    data      = request.get_json(silent=True) or {}
+    joueur_id = data.get("joueur_id")
+    quete     = data.get("quete")
+    scores    = data.get("scores")
+    if not joueur_id or not quete or scores is None:
+        return jsonify({"erreur": "Données manquantes"}), 400
+    progression = _json.dumps({"quete": quete, "scores": scores})
+    conn = open_db_rw()
+    conn.execute(
+        "UPDATE joueur SET quete_actuelle = ?, progression = ? WHERE id = ?",
+        (quete, progression, joueur_id),
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"succes": True})
+
+
+@app.route("/charger/<int:joueur_id>")
+def charger(joueur_id):
+    import json as _json
+    conn = open_db()
+    row  = conn.execute(
+        "SELECT id, pseudo, starter_id, quete_actuelle, progression FROM joueur WHERE id = ?",
+        (joueur_id,),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"erreur": "Joueur introuvable"}), 404
+    d = dict(row)
+    if d["progression"]:
+        d["progression"] = _json.loads(d["progression"])
+    return jsonify(d)
+
+
+@app.route("/sauvegarde/<pseudo>")
+def sauvegarde_pseudo(pseudo):
+    import json as _json
+    conn = open_db()
+    row  = conn.execute(
+        """SELECT id, pseudo, starter_id, quete_actuelle, progression
+           FROM joueur WHERE pseudo = ? AND progression IS NOT NULL
+           ORDER BY id DESC LIMIT 1""",
+        (pseudo,),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"trouve": False})
+    d = dict(row)
+    if d["progression"]:
+        d["progression"] = _json.loads(d["progression"])
+    d["trouve"] = True
+    return jsonify(d)
+
+
 @app.route("/executer", methods=["POST"])
 def executer():
     data    = request.get_json(silent=True) or {}

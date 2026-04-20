@@ -47,7 +47,8 @@ def create_tables(conn):
             pseudo      TEXT    NOT NULL,
             starter_id  INTEGER REFERENCES pokemon(id),
             quete_actuelle INTEGER DEFAULT 1,
-            date_debut  TEXT    DEFAULT (datetime('now'))
+            date_debut  TEXT    DEFAULT (datetime('now')),
+            progression TEXT    DEFAULT NULL
         );
     """)
 

@@ -89,6 +89,16 @@
       </div>
     </div>
 
+    <!-- Étape Save : sauvegarde trouvée -->
+    <div id="step-save" style="display:none;flex-direction:column;gap:16px;align-items:center">
+      <div class="save-title">&gt; SAUVEGARDE TROUVÉE</div>
+      <div class="save-info" id="save-info"></div>
+      <div class="save-choices">
+        <button class="btn-intro" onclick="chargerSauvegarde()">▶ OUI — CONTINUER</button>
+        <button class="btn-save-non" onclick="ignorerSauvegarde()">✕ NON — REPARTIR</button>
+      </div>
+    </div>
+
     <!-- Étape B : choix du starter -->
     <div id="step-b" style="display:none">
       <div class="starter-prompt">&gt; CHOISIS TON PARTENAIRE DE DÉPART :</div>

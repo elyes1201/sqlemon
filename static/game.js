@@ -168,15 +168,64 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function allerEtapeMode() {
+async function allerEtapeMode() {
   const pseudo = document.getElementById('pseudo-input').value.trim();
-  if (!pseudo) {
-    document.getElementById('pseudo-input').focus();
-    return;
-  }
+  if (!pseudo) { document.getElementById('pseudo-input').focus(); return; }
   joueurPseudo = pseudo;
   document.getElementById('step-a').style.display = 'none';
+
+  // Vérifier si une sauvegarde existe pour ce pseudo
+  try {
+    const resp = await fetch('/sauvegarde/' + encodeURIComponent(pseudo));
+    const data = await resp.json();
+    if (data.trouve) { _afficherDialogueSauvegarde(data); return; }
+  } catch { /* erreur réseau : on continue normalement */ }
+
   document.getElementById('step-mode').style.display = 'flex';
+}
+
+// ── Sauvegarde ────────────────────────────────────────────────────────────────
+let _saveData = null;
+
+function _afficherDialogueSauvegarde(data) {
+  _saveData = data;
+  const prog     = data.progression || {};
+  const queteNum = prog.quete || data.quete_actuelle || 1;
+  const okCount  = (prog.scores || []).filter(s => s === true).length;
+  document.getElementById('save-info').innerHTML =
+    `> DRESSEUR : ${data.pseudo.toUpperCase()}<br>` +
+    `> QUÊTE    : ${queteNum}/35<br>` +
+    `> RÉUSSIES : ${okCount}/35`;
+  document.getElementById('step-save').style.display = 'flex';
+}
+
+function chargerSauvegarde() {
+  if (!_saveData) return;
+  const prog = _saveData.progression || {};
+  joueurId          = _saveData.id;
+  joueurStarterId   = _saveData.starter_id;
+  selectedStarterId = _saveData.starter_id;
+  if (Array.isArray(prog.scores)) scores = prog.scores;
+  if (prog.quete) quete = prog.quete;
+  gameMode = 'histoire';
+  demarrerJeu();
+}
+
+function ignorerSauvegarde() {
+  _saveData = null;
+  document.getElementById('step-save').style.display = 'none';
+  document.getElementById('step-mode').style.display = 'flex';
+}
+
+async function sauvegarder() {
+  if (!joueurId || gameMode !== 'histoire') return;
+  try {
+    await fetch('/sauvegarder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ joueur_id: joueurId, quete, scores }),
+    });
+  } catch { /* silencieux */ }
 }
 
 async function allerEtapeB(mode) {
@@ -304,7 +353,7 @@ function demarrerJeu() {
 
     buildActBar();
     buildPips();
-    chargerQuete(1);
+    chargerQuete(quete); // utilise la quête sauvegardée ou 1 par défaut
   }, 700);
 }
 
@@ -706,6 +755,7 @@ function afficherReponse(data) {
     soundSucces();
     scores[quete - 1] = true;
     majPips();
+    sauvegarder();
     if (data.resultat) buildTable(data.resultat, 'RÉSULTAT', 'r-ok');
     setFeedback('> ' + data.message, 'ok');
     revelerSprite();
