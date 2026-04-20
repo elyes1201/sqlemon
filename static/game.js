@@ -46,15 +46,15 @@ function changeBg(acteNum) {
 
 // ── Musique de fond ───────────────────────────────────────────────────────────
 const MUSIQUES = {
-  1: 'https://play.pokemonshowdown.com/audio/bgm/pallet.mp3',
-  2: 'https://play.pokemonshowdown.com/audio/bgm/viridianforest.mp3',
-  3: 'https://play.pokemonshowdown.com/audio/bgm/mtmoon.mp3',
-  4: 'https://play.pokemonshowdown.com/audio/bgm/cerulean.mp3',
-  5: 'https://play.pokemonshowdown.com/audio/bgm/lavender.mp3',
-  6: 'https://play.pokemonshowdown.com/audio/bgm/vermilion.mp3',
-  7: 'https://play.pokemonshowdown.com/audio/bgm/cinnabar.mp3',
-  8: 'https://play.pokemonshowdown.com/audio/bgm/cerulean.mp3',
-  9: 'https://play.pokemonshowdown.com/audio/bgm/indigo.mp3',
+  1: '/static/music/pallet.mp3',
+  2: '/static/music/viridianforest.mp3',
+  3: '/static/music/mtmoon.mp3',
+  4: '/static/music/cerulean.mp3',
+  5: '/static/music/lavender.mp3',
+  6: '/static/music/vermilion.mp3',
+  7: '/static/music/cinnabar.mp3',
+  8: '/static/music/cerulean.mp3',
+  9: '/static/music/indigo.mp3',
 };
 let audio = null;
 let soundEnabled = true;
