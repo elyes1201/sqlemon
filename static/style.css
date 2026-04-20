@@ -1412,6 +1412,16 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
 .help-item { font-family: var(--fn); font-size: 5px; color: var(--gb-light); line-height: 2; display: flex; gap: 5px; align-items: baseline; }
 .help-key { font-family: var(--fn); font-size: 5px; color: var(--gb-lightest); border: 1px solid #333; border-radius: 3px; padding: 1px 3px; flex-shrink: 0; white-space: nowrap; }
 
+/* ── Crédits ─────────────────────────────────────────────────────────────── */
+#credits {
+  font-family: var(--fn);
+  font-size: 5px;
+  color: #333;
+  letter-spacing: 2px;
+  text-align: center;
+  padding: 4px 0 2px;
+}
+
 /* ── Bouton son ──────────────────────────────────────────────────────────── */
 #sound-btn {
   position: fixed; top: 12px; right: 12px; z-index: 90;
