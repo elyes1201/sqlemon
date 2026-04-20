@@ -282,6 +282,54 @@ def arcade_stats():
     return jsonify(st)
 
 
+@app.route("/record", methods=["POST"])
+def ajouter_record():
+    data      = request.get_json(silent=True) or {}
+    pseudo    = (data.get("pseudo") or "").strip()
+    quete_num = data.get("quete_num")
+    temps     = data.get("temps_secondes")
+    if not pseudo or not isinstance(quete_num, int) or not isinstance(temps, int):
+        return jsonify({"erreur": "Données invalides"}), 400
+    conn = open_db_rw()
+    row = conn.execute(
+        "SELECT id, temps_secondes FROM records WHERE pseudo = ? AND quete_num = ?",
+        (pseudo, quete_num)
+    ).fetchone()
+    if row:
+        if temps < row["temps_secondes"]:
+            conn.execute(
+                "UPDATE records SET temps_secondes = ?, date = datetime('now') WHERE id = ?",
+                (temps, row["id"])
+            )
+            conn.commit()
+            conn.close()
+            return jsonify({"succes": True, "nouveau": True})
+        conn.close()
+        return jsonify({"succes": True, "nouveau": False})
+    conn.execute(
+        "INSERT INTO records (pseudo, quete_num, temps_secondes) VALUES (?, ?, ?)",
+        (pseudo, quete_num, temps)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"succes": True, "nouveau": True})
+
+
+@app.route("/classement/<int:quete_num>")
+def classement(quete_num):
+    conn = open_db()
+    rows = conn.execute(
+        """SELECT pseudo, temps_secondes
+           FROM records
+           WHERE quete_num = ?
+           ORDER BY temps_secondes ASC
+           LIMIT 10""",
+        (quete_num,)
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
 @app.route("/badge", methods=["POST"])
 def ajouter_badge():
     import json as _json

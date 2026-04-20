@@ -22,6 +22,19 @@
 <!-- Bouton SAC (badges) — visible uniquement pendant le jeu -->
 <button id="btn-sac" class="hidden" title="Badges" onclick="afficherBadges()">🎖️ SAC</button>
 
+<!-- Bouton TOP (classement) — visible uniquement en mode histoire -->
+<button id="btn-top" class="hidden" title="Classement" onclick="afficherClassement()">🏆 TOP</button>
+
+<!-- Popup classement -->
+<div id="popup-classement" class="hidden">
+  <div class="classement-box">
+    <div class="classement-title">&gt; MEILLEURS TEMPS</div>
+    <div class="classement-quest-label" id="classement-quest-label">QUÊTE 01</div>
+    <div id="classement-list" class="classement-list"></div>
+    <button class="btn-classement-close" onclick="fermerClassement()">✕ FERMER</button>
+  </div>
+</div>
+
 <!-- Popup badges -->
 <div id="popup-badges" class="hidden">
   <div class="badges-box">
@@ -189,6 +202,7 @@
           <div class="score-line" id="score-histoire">
             <div>QUÊTE <span id="ss-num" style="color:var(--gb-darkest)">01</span>/35</div>
             <div><span class="score-ok" id="sc-ok">0</span> OK · <span class="score-fail" id="sc-fail">0</span> FAIL</div>
+            <div id="quest-timer-display" style="display:none">⏱ <span id="quest-timer">00:00</span></div>
           </div>
           <div class="score-line" id="score-arcade" style="display:none">
             <div>DÉFI <span id="ss-defi" style="color:var(--gb-darkest)">01</span></div>

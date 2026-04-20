@@ -268,6 +268,89 @@ function fermerBadges() {
   document.getElementById('popup-badges').classList.add('hidden');
 }
 
+// ── Timer par quête ────────────────────────────────────────────────────────
+let _questTimerInterval = null;
+let _questTimerStart    = null;
+let _questTimerSec      = 0;
+
+function startQuestTimer() {
+  stopQuestTimer();
+  _questTimerStart = Date.now();
+  _questTimerSec   = 0;
+  const display = document.getElementById('quest-timer-display');
+  if (display) display.style.display = '';
+  _questTimerInterval = setInterval(() => {
+    _questTimerSec = Math.floor((Date.now() - _questTimerStart) / 1000);
+    const m  = Math.floor(_questTimerSec / 60);
+    const s  = _questTimerSec % 60;
+    const el = document.getElementById('quest-timer');
+    if (el) el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }, 1000);
+}
+
+function stopQuestTimer() {
+  if (_questTimerInterval) {
+    clearInterval(_questTimerInterval);
+    _questTimerInterval = null;
+  }
+  const elapsed = _questTimerStart
+    ? Math.floor((Date.now() - _questTimerStart) / 1000)
+    : _questTimerSec;
+  _questTimerStart = null;
+  const display = document.getElementById('quest-timer-display');
+  if (display) display.style.display = 'none';
+  const el = document.getElementById('quest-timer');
+  if (el) el.textContent = '00:00';
+  return elapsed;
+}
+
+async function soumettrRecord(queteNum, tempsSecondes) {
+  if (!joueurPseudo || gameMode !== 'histoire') return;
+  try {
+    await fetch('/record', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pseudo: joueurPseudo, quete_num: queteNum, temps_secondes: tempsSecondes }),
+    });
+  } catch { /* silencieux */ }
+}
+
+// ── Classement ────────────────────────────────────────────────────────────
+async function afficherClassement() {
+  document.getElementById('classement-quest-label').textContent =
+    'QUÊTE ' + String(quete).padStart(2,'0');
+  document.getElementById('classement-list').innerHTML =
+    '<div style="font-size:5px;color:var(--gb-dark)">CHARGEMENT…</div>';
+  document.getElementById('popup-classement').classList.remove('hidden');
+
+  try {
+    const r    = await fetch(`/classement/${quete}`);
+    const data = await r.json();
+    const list = document.getElementById('classement-list');
+    if (!data.length) {
+      list.innerHTML = '<div style="font-size:5px;color:var(--gb-dark)">AUCUN RECORD POUR CETTE QUÊTE</div>';
+      return;
+    }
+    list.innerHTML = data.map((row, i) => {
+      const m = Math.floor(row.temps_secondes / 60);
+      const s = row.temps_secondes % 60;
+      const t = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+      return `<div class="classement-row${i === 0 ? ' classement-top' : ''}">` +
+             `<span class="classement-rank">#${i+1}</span>` +
+             `<span class="classement-pseudo">${row.pseudo.toUpperCase()}</span>` +
+             `<span class="classement-temps">${t}</span>` +
+             `</div>`;
+    }).join('');
+  } catch {
+    document.getElementById('classement-list').innerHTML =
+      '<div style="font-size:5px;color:#FF6666">ERREUR DE CHARGEMENT</div>';
+  }
+}
+
+function fermerClassement() {
+  document.getElementById('popup-classement').classList.add('hidden');
+}
+
 async function allerEtapeB(mode) {
   gameMode = mode;
   document.getElementById('step-mode').style.display = 'none';
@@ -392,6 +475,7 @@ function demarrerJeu() {
     document.getElementById('fin-starter').textContent = joueurStarterNom.toUpperCase();
 
     document.getElementById('btn-sac').classList.remove('hidden');
+    document.getElementById('btn-top').classList.remove('hidden');
     buildActBar();
     buildPips();
     chargerQuete(quete); // utilise la quête sauvegardée ou 1 par défaut
@@ -655,6 +739,13 @@ async function chargerQuete(n) {
   quete = n;
   majPips();
 
+  // Démarrer le timer uniquement si la quête n'est pas déjà réussie
+  if (scores[n - 1] !== true) {
+    startQuestTimer();
+  } else {
+    stopQuestTimer();
+  }
+
   setFeedback('', '');
   document.getElementById('results-zone').innerHTML = '';
   document.getElementById('q-indice').classList.remove('visible');
@@ -793,10 +884,12 @@ function afficherReponse(data) {
   if (data.erreur)     { setFeedback('> ERR: ' + data.erreur, 'bad'); return; }
 
   if (data.succes) {
+    const tempsSecondes = stopQuestTimer();
     soundSucces();
     scores[quete - 1] = true;
     majPips();
     sauvegarder();
+    soumettrRecord(quete, tempsSecondes);
     if (data.resultat) buildTable(data.resultat, 'RÉSULTAT', 'r-ok');
     setFeedback('> ' + data.message, 'ok');
     revelerSprite();
@@ -907,6 +1000,9 @@ function rejouer() {
   document.querySelectorAll('.diff-btn').forEach(b =>
     b.classList.toggle('active', parseInt(b.dataset.niveau) === 0));
 
+  stopQuestTimer();
+  document.getElementById('btn-top').classList.add('hidden');
+  document.getElementById('btn-sac').classList.add('hidden');
   document.getElementById('game-content').style.display = 'none';
   document.getElementById('ecran-intro').style.display  = 'flex';
   document.getElementById('ecran-intro').classList.remove('fade-out');

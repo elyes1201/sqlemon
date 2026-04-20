@@ -42,6 +42,13 @@ def create_tables(conn):
             capacite_id INTEGER REFERENCES capacites(id),
             PRIMARY KEY (pokemon_id, capacite_id)
         );
+        CREATE TABLE IF NOT EXISTS records (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            pseudo          TEXT    NOT NULL,
+            quete_num       INTEGER NOT NULL,
+            temps_secondes  INTEGER NOT NULL,
+            date            TEXT    DEFAULT (datetime('now'))
+        );
         CREATE TABLE IF NOT EXISTS joueur (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             pseudo      TEXT    NOT NULL,
