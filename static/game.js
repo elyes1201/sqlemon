@@ -124,6 +124,12 @@ let joueurId = null;
 // Badges obtenus
 let badges = [];
 
+// Boss
+let bossVaincus      = []; // numéros d'actes dont le boss est vaincu
+let bossActuel       = null; // acte du boss en cours (null = pas en mode boss)
+let _pendingBossActe  = null; // acteData stocké pour après le boss
+let _pendingBossFinale = false; // true si le boss précède l'écran de fin
+
 // ── Démarrage ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Restaurer préférence son
@@ -217,7 +223,8 @@ function chargerSauvegarde() {
   selectedStarterId = _saveData.starter_id;
   if (Array.isArray(prog.scores)) scores = prog.scores;
   if (prog.quete) quete = prog.quete;
-  if (Array.isArray(_saveData.badges)) badges = _saveData.badges;
+  if (Array.isArray(_saveData.badges))       badges      = _saveData.badges;
+  if (Array.isArray(_saveData.boss_vaincus)) bossVaincus = _saveData.boss_vaincus;
   gameMode = 'histoire';
   demarrerJeu();
 }
@@ -261,6 +268,7 @@ function afficherBadges() {
            `<span>${obtenu ? '✓' : '✗'}</span>Badge ${b}` +
            `</div>`;
   }).join('');
+  document.getElementById('boss-count').textContent = `${bossVaincus.length}/9`;
   document.getElementById('popup-badges').classList.remove('hidden');
 }
 
@@ -349,6 +357,165 @@ async function afficherClassement() {
 
 function fermerClassement() {
   document.getElementById('popup-classement').classList.add('hidden');
+}
+
+// ── Mode Boss ──────────────────────────────────────────────────────────────
+
+function proposerBoss(acteData, estFinale) {
+  _pendingBossActe   = acteData;
+  _pendingBossFinale = estFinale;
+  document.getElementById('boss-popup-zone').textContent = acteData.zone;
+  document.getElementById('popup-boss').classList.remove('hidden');
+}
+
+function fermerPopupBoss() {
+  document.getElementById('popup-boss').classList.add('hidden');
+}
+
+function accepterBoss() {
+  fermerPopupBoss();
+  chargerBoss(_pendingBossActe.num);
+}
+
+function fuirBoss() {
+  fermerPopupBoss();
+  const acteData  = _pendingBossActe;
+  const estFinale = _pendingBossFinale;
+  _pendingBossActe   = null;
+  _pendingBossFinale = false;
+  if (estFinale) {
+    afficherFin();
+  } else {
+    afficherTransition(acteData, acteData.last + 1);
+  }
+}
+
+function sortirBossMode() {
+  bossActuel = null;
+  gameMode   = 'histoire';
+  document.body.classList.remove('boss-mode');
+  document.getElementById('lcd-header-boss').style.display     = 'none';
+  document.getElementById('lcd-header-histoire').style.display = '';
+}
+
+async function chargerBoss(acteNum) {
+  bossActuel = acteNum;
+  gameMode   = 'boss';
+  document.body.classList.add('boss-mode');
+  document.getElementById('lcd-header-histoire').style.display = 'none';
+  document.getElementById('lcd-header-boss').style.display     = '';
+  document.getElementById('boss-acte-display').textContent     = acteNum;
+
+  // Réinitialiser l'interface
+  stopQuestTimer();
+  document.getElementById('requete').value = '';
+  setFeedback('', '');
+  document.getElementById('results-zone').innerHTML = '';
+  document.getElementById('q-indice').classList.remove('visible');
+  cacherBoutonSuivant();
+
+  try {
+    const r = await fetch(`/boss/${acteNum}`);
+    const d = await r.json();
+
+    document.getElementById('q-zone').textContent   = '⚔️ BOSS · ' + (d.zone || '');
+    document.getElementById('q-titre').textContent  = d.titre.toUpperCase();
+    document.getElementById('q-desc').innerHTML     = d.description.replace(/\n/g, '<br>');
+    document.getElementById('q-indice').textContent = d.indice;
+
+    const contexteEl = document.getElementById('q-contexte');
+    if (d.contexte) {
+      contexteEl.textContent = '> ' + d.contexte;
+      contexteEl.classList.add('visible');
+    } else {
+      contexteEl.classList.remove('visible');
+    }
+
+    chargerSprite(null);
+
+  } catch {
+    document.getElementById('q-titre').textContent = 'ERREUR CHARGEMENT BOSS';
+  }
+}
+
+async function validerBoss() {
+  const req = document.getElementById('requete').value.trim();
+  if (!req)       { setFeedback('> SAISIR UNE REQUETE SQL', 'bad'); return; }
+  if (!bossActuel) return;
+
+  setFeedback('> ANALYSE EN COURS…', 'ok loader');
+  document.getElementById('results-zone').innerHTML = '';
+  document.getElementById('btn-val').disabled = true;
+
+  try {
+    const resp = await fetch('/boss/valider', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acte: bossActuel, requete: req }),
+    });
+    const data = await resp.json();
+    document.getElementById('btn-val').disabled = false;
+    afficherReponseBoss(data);
+  } catch {
+    document.getElementById('btn-val').disabled = false;
+    setFeedback('> ERREUR: SERVEUR INJOIGNABLE', 'bad');
+  }
+}
+
+function afficherReponseBoss(data) {
+  if (data.erreur_sql) { afficherErreurSQL(data.message); return; }
+  if (data.erreur)     { setFeedback('> ERR: ' + data.erreur, 'bad'); return; }
+
+  if (data.succes) {
+    soundSucces();
+    if (data.resultat) buildTable(data.resultat, 'RÉSULTAT', 'r-ok');
+    setFeedback('> ' + data.message, 'ok');
+    flashBossVictory();
+    marquerBossVaincu(bossActuel);
+    const btn = document.getElementById('btn-next-quest');
+    btn.textContent = "CONTINUER L'AVENTURE ▶";
+    btn.classList.add('visible');
+  } else {
+    soundErreur();
+    setFeedback('> ' + data.message, 'bad');
+    if (data.resultat) buildTable(data.resultat, 'CE QUE TA REQUÊTE RETOURNE', 'r-bad');
+    if (data.attendu)  buildTable(data.attendu,  'CE QUI ÉTAIT ATTENDU', '');
+  }
+}
+
+async function marquerBossVaincu(acteNum) {
+  if (bossVaincus.includes(acteNum)) return;
+  bossVaincus.push(acteNum);
+  if (joueurId) {
+    try {
+      await fetch('/boss/gagner', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ joueur_id: joueurId, acte: acteNum }),
+      });
+    } catch { /* silencieux */ }
+  }
+}
+
+function flashBossVictory() {
+  const el = document.getElementById('boss-flash');
+  el.classList.remove('hidden');
+  // Force reflow pour relancer l'animation
+  void el.offsetWidth;
+  setTimeout(() => el.classList.add('hidden'), 700);
+}
+
+function nextQuestAfterBoss() {
+  const acteData  = _pendingBossActe;
+  const estFinale = _pendingBossFinale;
+  _pendingBossActe   = null;
+  _pendingBossFinale = false;
+  sortirBossMode();
+  if (estFinale) {
+    afficherFin();
+  } else if (acteData) {
+    afficherTransition(acteData, acteData.last + 1);
+  }
 }
 
 async function allerEtapeB(mode) {
@@ -736,6 +903,9 @@ function majPips() {
 
 // ── Chargement d'une quête ────────────────────────────────────────────────────
 async function chargerQuete(n) {
+  // Quitter le mode boss si le joueur navigue vers une quête normale
+  if (gameMode === 'boss') sortirBossMode();
+
   quete = n;
   majPips();
 
@@ -857,6 +1027,7 @@ function effacer() {
 // ── Valider ───────────────────────────────────────────────────────────────────
 async function valider() {
   if (gameMode === 'arcade') { validerArcade(); return; }
+  if (gameMode === 'boss')   { validerBoss();   return; }
   const req = document.getElementById('requete').value.trim();
   if (!req) { setFeedback('> SAISIR UNE REQUETE SQL', 'bad'); return; }
 
@@ -927,11 +1098,17 @@ function cacherBoutonSuivant() {
 
 function nextQuest() {
   cacherBoutonSuivant();
-  if (gameMode === 'arcade') { chargerDefiArcade(); return; }
-  const acteData = getActe(quete);
-  const estDernierDActe = (quete === acteData.last);
+  if (gameMode === 'boss')   { nextQuestAfterBoss();  return; }
+  if (gameMode === 'arcade') { chargerDefiArcade();   return; }
 
-  if (quete === TOTAL) {
+  const acteData        = getActe(quete);
+  const estDernierDActe = (quete === acteData.last);
+  const estFinale       = (quete === TOTAL);
+
+  // Proposer le boss si fin d'acte et boss pas encore vaincu
+  if (estDernierDActe && !bossVaincus.includes(acteData.num)) {
+    proposerBoss(acteData, estFinale);
+  } else if (estFinale) {
     afficherFin();
   } else if (estDernierDActe) {
     afficherTransition(acteData, quete + 1);
@@ -995,6 +1172,12 @@ function rejouer() {
   gameMode = 'histoire';
   defiCount = 0; defiOk = 0; defiStreak = 0; defiChallengeId = null;
   arcadeNiveau = 0; joueurId = null;
+  bossVaincus = []; bossActuel = null;
+  _pendingBossActe = null; _pendingBossFinale = false;
+  document.body.classList.remove('boss-mode');
+  document.getElementById('lcd-header-boss').style.display = 'none';
+  document.getElementById('lcd-header-histoire').style.display = '';
+  badges = [];
   document.getElementById('arcade-bar').classList.remove('visible');
   document.getElementById('btn-passer').classList.remove('visible');
   document.querySelectorAll('.diff-btn').forEach(b =>

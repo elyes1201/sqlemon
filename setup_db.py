@@ -50,13 +50,14 @@ def create_tables(conn):
             date            TEXT    DEFAULT (datetime('now'))
         );
         CREATE TABLE IF NOT EXISTS joueur (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            pseudo      TEXT    NOT NULL,
-            starter_id  INTEGER REFERENCES pokemon(id),
-            quete_actuelle INTEGER DEFAULT 1,
-            date_debut  TEXT    DEFAULT (datetime('now')),
-            progression TEXT    DEFAULT NULL,
-            badges      TEXT    DEFAULT '[]'
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            pseudo          TEXT    NOT NULL,
+            starter_id      INTEGER REFERENCES pokemon(id),
+            quete_actuelle  INTEGER DEFAULT 1,
+            date_debut      TEXT    DEFAULT (datetime('now')),
+            progression     TEXT    DEFAULT NULL,
+            badges          TEXT    DEFAULT '[]',
+            boss_vaincus    TEXT    DEFAULT '[]'
         );
     """)
 

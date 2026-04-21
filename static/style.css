@@ -1412,6 +1412,146 @@ body.acte-9 { background-image: linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55))
 .help-item { font-family: var(--fn); font-size: 5px; color: var(--gb-light); line-height: 2; display: flex; gap: 5px; align-items: baseline; }
 .help-key { font-family: var(--fn); font-size: 5px; color: var(--gb-lightest); border: 1px solid #333; border-radius: 3px; padding: 1px 3px; flex-shrink: 0; white-space: nowrap; }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODE BOSS
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* Halo rouge pulsant sur le Pokédex en mode boss */
+body.boss-mode .pokedex {
+  animation: boss-glow-pulse 1s ease-in-out infinite;
+}
+@keyframes boss-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255,0,0,0.5)); }
+  50%      { filter: drop-shadow(0 0 22px rgba(255,0,0,0.95)); }
+}
+
+/* Badge ⚔️ BOSS dans l'en-tête LCD */
+.lcd-boss-badge {
+  font-size: 6px;
+  color: #FF4444;
+  letter-spacing: 2px;
+  animation: boss-blink 0.7s step-end infinite;
+}
+@keyframes boss-blink {
+  0%,49%   { color: #FF4444; }
+  50%,100% { color: #880000; }
+}
+
+/* Flash rouge plein écran sur victoire boss */
+#boss-flash {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(204, 0, 0, 0.55);
+  pointer-events: none;
+  animation: boss-flash-anim 0.7s ease forwards;
+}
+#boss-flash.hidden { display: none; }
+@keyframes boss-flash-anim {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Popup Boss Fight ────────────────────────────────────────────────────── */
+#popup-boss {
+  position: fixed; inset: 0; z-index: 190;
+  background: rgba(5,5,10,0.92);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  animation: boss-pop-in .35s cubic-bezier(.36,1.56,.64,1);
+}
+#popup-boss.hidden { display: none; }
+@keyframes boss-pop-in {
+  0%   { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.boss-popup-box {
+  background: #0A0A10;
+  border: 3px solid #CC0000;
+  box-shadow:
+    inset 0 0 0 1px #1A0000,
+    0 0 50px rgba(204,0,0,0.4),
+    0 8px 32px rgba(0,0,0,0.8);
+  border-radius: 8px;
+  padding: 28px 32px;
+  max-width: 380px; width: 100%;
+  display: flex; flex-direction: column; gap: 14px; align-items: center;
+  position: relative;
+  animation: boss-box-pulse 1.2s ease-in-out infinite;
+}
+@keyframes boss-box-pulse {
+  0%, 100% { border-color: #CC0000; box-shadow: inset 0 0 0 1px #1A0000, 0 0 30px rgba(204,0,0,0.3), 0 8px 32px rgba(0,0,0,0.8); }
+  50%      { border-color: #FF3333; box-shadow: inset 0 0 0 1px #2A0000, 0 0 60px rgba(255,51,51,0.6), 0 8px 32px rgba(0,0,0,0.8); }
+}
+.boss-popup-box::before, .boss-popup-box::after {
+  content: '■'; position: absolute;
+  font-size: 8px; color: #880000; pointer-events: none;
+}
+.boss-popup-box::before { top: 5px; left: 8px; }
+.boss-popup-box::after  { top: 5px; right: 8px; }
+
+.boss-popup-sword { font-size: 32px; line-height: 1; animation: sword-shake .5s ease infinite alternate; }
+@keyframes sword-shake {
+  from { transform: rotate(-8deg) scale(1); }
+  to   { transform: rotate(8deg) scale(1.1); }
+}
+
+.boss-popup-title {
+  font-family: var(--fn); font-size: 11px;
+  color: #FF3333;
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px rgba(255,51,51,0.7), 2px 2px 0 rgba(0,0,0,0.6);
+  animation: boss-title-flash .8s step-end infinite;
+}
+@keyframes boss-title-flash {
+  0%,49%   { color: #FF3333; text-shadow: 0 0 20px rgba(255,51,51,0.7); }
+  50%,100% { color: #CC0000; text-shadow: 0 0 8px rgba(204,0,0,0.4); }
+}
+
+.boss-popup-zone {
+  font-family: var(--fn); font-size: 6px;
+  color: var(--gb-light); letter-spacing: 2px;
+  text-align: center; line-height: 1.8;
+}
+.boss-popup-msg {
+  font-family: var(--fn); font-size: 6px;
+  color: var(--gb-lightest); text-align: center; line-height: 2;
+}
+
+.boss-popup-btns {
+  display: flex; gap: 10px; width: 100%;
+}
+.btn-boss-accepter {
+  flex: 1; font-family: var(--fn); font-size: 7px;
+  background: linear-gradient(to bottom, #FF3333, #CC0000);
+  border: 2px solid #880000; border-radius: 8px;
+  color: #FFF; padding: 10px 8px; cursor: pointer;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 0 #660000, 0 5px 10px rgba(0,0,0,0.4);
+  transition: filter .1s, transform .07s, box-shadow .07s;
+}
+.btn-boss-accepter:hover  { filter: brightness(1.15); }
+.btn-boss-accepter:active { transform: translateY(4px); box-shadow: 0 0 0 #660000; }
+
+.btn-boss-fuir {
+  flex: 1; font-family: var(--fn); font-size: 7px;
+  background: transparent;
+  border: 2px solid #444; border-radius: 8px;
+  color: var(--gb-light); padding: 10px 8px; cursor: pointer;
+  letter-spacing: 1px;
+  transition: border-color .1s, color .1s;
+}
+.btn-boss-fuir:hover { border-color: var(--gb-light); color: var(--gb-lightest); }
+
+/* ── Compteur boss dans le SAC ───────────────────────────────────────────── */
+.boss-vaincus-line {
+  font-family: var(--fn); font-size: 6px;
+  color: var(--gb-light); letter-spacing: 2px;
+  border-top: 1px solid #1a1a1a;
+  padding-top: 8px; text-align: center;
+}
+.boss-vaincus-line span { color: #FF4444; }
+
 /* ── Crédits ─────────────────────────────────────────────────────────────── */
 #credits {
   font-family: var(--fn);

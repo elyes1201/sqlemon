@@ -8,6 +8,7 @@ import webbrowser
 import threading
 from quetes import QUESTS
 from arcade import generer_question
+from boss import BOSS
 
 # Stockage en mémoire des questions arcade (clé = UUID)
 _arcade_store: dict = {}
@@ -282,6 +283,94 @@ def arcade_stats():
     return jsonify(st)
 
 
+@app.route("/boss/<int:acte_num>")
+def get_boss(acte_num):
+    if not 1 <= acte_num <= len(BOSS):
+        return jsonify({"erreur": "Boss introuvable"}), 404
+    b = BOSS[acte_num - 1]
+    return jsonify({
+        "acte":        b["acte"],
+        "zone":        b["zone"],
+        "titre":       b["titre"],
+        "contexte":    b.get("contexte", ""),
+        "description": b["description"],
+        "indice":      b["indice"],
+    })
+
+
+@app.route("/boss/valider", methods=["POST"])
+def valider_boss():
+    data    = request.get_json(silent=True) or {}
+    acte    = data.get("acte")
+    requete = (data.get("requete") or "").strip()
+
+    if not isinstance(acte, int) or not 1 <= acte <= len(BOSS):
+        return jsonify({"erreur": "Numéro d'acte invalide"}), 400
+    if not requete:
+        return jsonify({"erreur": "Requête vide"}), 400
+
+    boss = BOSS[acte - 1]
+
+    try:
+        conn = open_db()
+        try:
+            cur         = conn.execute(requete)
+            player_rows = cur.fetchmany(500)
+            player_cols = [d[0] for d in cur.description] if cur.description else []
+        except sqlite3.Error as e:
+            conn.close()
+            return jsonify({"succes": False, "erreur_sql": str(e),
+                            "message": f"Erreur SQL : {e}"})
+
+        cur2     = conn.execute(boss["solution"])
+        sol_rows = cur2.fetchall()
+        sol_cols = [d[0] for d in cur2.description] if cur2.description else []
+        conn.close()
+
+        succes = normalise(player_rows, player_cols, boss["compare"]) \
+              == normalise(sol_rows,    sol_cols,    boss["compare"])
+
+        message = (
+            f"BOSS VAINCU ! {len(player_rows)} ligne(s) retournée(s)."
+            if succes else
+            f"Pas encore… {len(player_rows)} ligne(s) obtenue(s), "
+            f"{len(sol_rows)} attendue(s)."
+        )
+
+        return jsonify({
+            "succes":   succes,
+            "message":  message,
+            "resultat": rows_to_dict(player_rows, player_cols, limit=50 if succes else 10),
+            "attendu":  None if succes else rows_to_dict(sol_rows, sol_cols, limit=5),
+        })
+
+    except Exception as e:
+        return jsonify({"succes": False, "message": f"Erreur serveur : {e}"}), 500
+
+
+@app.route("/boss/gagner", methods=["POST"])
+def gagner_boss():
+    import json as _json
+    data     = request.get_json(silent=True) or {}
+    joueur_id = data.get("joueur_id")
+    acte      = data.get("acte")
+    if not joueur_id or not isinstance(acte, int):
+        return jsonify({"erreur": "Données manquantes"}), 400
+    conn = open_db_rw()
+    row  = conn.execute("SELECT boss_vaincus FROM joueur WHERE id = ?", (joueur_id,)).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"erreur": "Joueur introuvable"}), 404
+    boss_vaincus = _json.loads(row["boss_vaincus"] or "[]")
+    if acte not in boss_vaincus:
+        boss_vaincus.append(acte)
+    conn.execute("UPDATE joueur SET boss_vaincus = ? WHERE id = ?",
+                 (_json.dumps(boss_vaincus), joueur_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"succes": True, "boss_vaincus": boss_vaincus})
+
+
 @app.route("/record", methods=["POST"])
 def ajouter_record():
     data      = request.get_json(silent=True) or {}
@@ -377,7 +466,7 @@ def charger(joueur_id):
     import json as _json
     conn = open_db()
     row  = conn.execute(
-        "SELECT id, pseudo, starter_id, quete_actuelle, progression, badges FROM joueur WHERE id = ?",
+        "SELECT id, pseudo, starter_id, quete_actuelle, progression, badges, boss_vaincus FROM joueur WHERE id = ?",
         (joueur_id,),
     ).fetchone()
     conn.close()
@@ -386,7 +475,8 @@ def charger(joueur_id):
     d = dict(row)
     if d["progression"]:
         d["progression"] = _json.loads(d["progression"])
-    d["badges"] = _json.loads(d["badges"] or "[]")
+    d["badges"]       = _json.loads(d["badges"]       or "[]")
+    d["boss_vaincus"] = _json.loads(d["boss_vaincus"] or "[]")
     return jsonify(d)
 
 
@@ -395,7 +485,7 @@ def sauvegarde_pseudo(pseudo):
     import json as _json
     conn = open_db()
     row  = conn.execute(
-        """SELECT id, pseudo, starter_id, quete_actuelle, progression, badges
+        """SELECT id, pseudo, starter_id, quete_actuelle, progression, badges, boss_vaincus
            FROM joueur WHERE pseudo = ? AND progression IS NOT NULL
            ORDER BY id DESC LIMIT 1""",
         (pseudo,),
@@ -406,7 +496,8 @@ def sauvegarde_pseudo(pseudo):
     d = dict(row)
     if d["progression"]:
         d["progression"] = _json.loads(d["progression"])
-    d["badges"] = _json.loads(d["badges"] or "[]")
+    d["badges"]       = _json.loads(d["badges"]       or "[]")
+    d["boss_vaincus"] = _json.loads(d["boss_vaincus"] or "[]")
     d["trouve"] = True
     return jsonify(d)
 

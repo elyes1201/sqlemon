@@ -25,6 +25,23 @@
 <!-- Bouton TOP (classement) — visible uniquement en mode histoire -->
 <button id="btn-top" class="hidden" title="Classement" onclick="afficherClassement()">🏆 TOP</button>
 
+<!-- Flash Boss victoire -->
+<div id="boss-flash" class="hidden"></div>
+
+<!-- Popup Boss Fight -->
+<div id="popup-boss" class="hidden">
+  <div class="boss-popup-box">
+    <div class="boss-popup-sword">⚔️</div>
+    <div class="boss-popup-title">BOSS FIGHT !</div>
+    <div class="boss-popup-zone" id="boss-popup-zone">Arène de Bourg Palette</div>
+    <div class="boss-popup-msg">Relève le défi final de cet acte !</div>
+    <div class="boss-popup-btns">
+      <button class="btn-boss-accepter" onclick="accepterBoss()">⚔️ ACCEPTER</button>
+      <button class="btn-boss-fuir"     onclick="fuirBoss()">🏃 FUIR</button>
+    </div>
+  </div>
+</div>
+
 <!-- Popup classement -->
 <div id="popup-classement" class="hidden">
   <div class="classement-box">
@@ -40,6 +57,7 @@
   <div class="badges-box">
     <div class="badges-title">&gt; TES BADGES</div>
     <div id="badges-list" class="badges-list"></div>
+    <div class="boss-vaincus-line">⚔️ BOSS VAINCUS : <span id="boss-count">0/9</span></div>
     <button class="btn-badges-close" onclick="fermerBadges()">✕ FERMER</button>
   </div>
 </div>
@@ -222,6 +240,9 @@
             </div>
             <div class="lcd-quest-num" id="lcd-header-arcade" style="display:none">
               ARCADE · DÉFI <b id="q-num-arc">01</b>
+            </div>
+            <div class="lcd-boss-badge" id="lcd-header-boss" style="display:none">
+              ⚔️ BOSS · ACTE <b id="boss-acte-display">1</b>
             </div>
             <div id="dresseur-badge" style="display:none">
               DRESSEUR&nbsp;<span id="db-pseudo"></span><br>
