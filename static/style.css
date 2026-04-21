@@ -1878,30 +1878,105 @@ body.boss-mode .pokedex {
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+
+  /* ── Pokédex layout : colonne ── */
   .pokedex {
     flex-direction: column;
     border-radius: 22px 22px 56px 22px;
     max-width: 100%;
+    width: 100%;
     height: auto;
     min-height: unset;
     max-height: none;
     overflow: visible;
   }
-  .half-left, .half-right { overflow: visible; }
-  .results-zone { max-height: 200px; }
-  .pokedex::after { top: 14px; left: 14px; }
-  .half-left { width: 100%; padding: 72px 14px 14px; }
-  .half-right { padding: 14px; }
+  .half-left  { overflow: visible; width: 100%; padding: 64px 12px 12px; }
+  .half-right { overflow: visible; padding: 12px; }
+
+  /* ── Ordre des sections dans half-left ── */
+  .half-left { display: flex; flex-direction: column; }
+  .screen-sprite-frame { order: 2; }
+  .screen-small-frame  { order: 1; }
+
+  /* ── Charnière horizontale ── */
   .hinge {
-    width: 100%; height: 18px;
+    width: 100%; height: 16px;
     flex-direction: row;
-    padding: 0 24px;
+    padding: 0 20px;
     justify-content: space-evenly;
   }
-  .leds { left: 68px; }
-  .intro-box  { padding: 20px 16px; }
-  .starters-grid     { gap: 6px; }
-  .mode-cards-grid   { grid-template-columns: 1fr; }
-  .act-bar, #arcade-bar { max-width: 100%; }
+
+  /* ── LEDs masquées ── */
+  .leds { display: none; }
+
+  /* ── Sprite frame réduit ── */
+  .screen-sprite-frame { min-height: 100px; max-height: 130px; }
+  .screen-sprite       { padding: 8px; }
+  .sprite-img          { max-height: 80px; }
+
+  /* ── Écran LCD ── */
+  .lcd-screen          { font-size: 6px; }
+  .lcd-header          { font-size: 6px; padding: 4px 8px; }
+  #quest-timer-display { font-size: 5px; }
+
+  /* ── Textarea : 16px empêche le zoom iOS ── */
+  textarea#requete {
+    font-size: 16px !important;
+    min-height: 100px;
+    padding: 8px;
+  }
+
+  /* ── Boutons 2×2 avec touch targets 44px ── */
+  .btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .btn {
+    min-height: 44px;
+    font-size: 6px;
+    padding: 4px 6px;
+  }
+  .btn-valider {
+    grid-column: 1 / -1;
+    min-height: 44px;
+  }
+  .btn-passer {
+    grid-column: 1 / -1;
+    min-height: 44px;
+  }
+  .btn-next-quest { min-height: 44px; font-size: 6px; }
+
+  /* ── Résultats ── */
+  .results-zone { max-height: 200px; }
+
+  /* ── Barre d'actes ── */
+  .act-bar, #arcade-bar { max-width: 100%; overflow-x: auto; }
+  .acte-badge           { min-width: 30px; height: 30px; font-size: 5px; }
+
+  /* ── Intro ── */
+  .intro-box  { padding: 20px 14px; max-width: 96vw; }
+  .intro-logo { font-size: 14px !important; }
+  .starters-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .starter-card { flex-direction: row; padding: 10px; gap: 10px; }
+  .mode-cards-grid { grid-template-columns: 1fr; }
+
+  /* ── Popups ── */
+  .intro-box,
+  .classement-box, .badges-box, .lb-box,
+  .tr-box, .fin-box, .boss-popup-box { max-width: 95vw; width: 95vw; padding: 16px; }
+
+  /* ── Boutons fixes (son, SAC, TOP, 🌍) ── */
+  #sound-btn  { top: 8px; right: 8px; width: 36px; height: 36px; }
+  #btn-sac    { top: 8px; right: 52px; height: 30px; font-size: 5px; padding: 0 6px; }
+  #btn-top    { top: 8px; right: 104px; height: 30px; font-size: 5px; padding: 0 6px; }
+  #btn-lb     { top: 8px; right: 148px; height: 30px; font-size: 5px; padding: 0 6px; }
+
+  /* ── Barre arcade ── */
+  #arcade-bar { flex-wrap: wrap; gap: 6px; padding: 6px 10px; font-size: 5px; }
+  .diff-btn   { min-height: 36px; min-width: 36px; font-size: 5px; padding: 4px 6px; }
 }
