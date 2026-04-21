@@ -237,11 +237,12 @@ function ignorerSauvegarde() {
 
 async function sauvegarder() {
   if (!joueurId || gameMode !== 'histoire') return;
+  const temps_secondes = startTime ? Math.floor((Date.now() - startTime) / 1000) : null;
   try {
     await fetch('/sauvegarder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ joueur_id: joueurId, quete, scores }),
+      body: JSON.stringify({ joueur_id: joueurId, quete, scores, temps_secondes }),
     });
   } catch { /* silencieux */ }
 }
@@ -357,6 +358,96 @@ async function afficherClassement() {
 
 function fermerClassement() {
   document.getElementById('popup-classement').classList.add('hidden');
+}
+
+// ── Leaderboard global ────────────────────────────────────────────────────
+let _lbData          = null;  // données chargées
+let _lbTab           = 0;     // onglet actif (0/1/2)
+let _lbRefreshTimer  = null;
+
+const LB_TABS = [
+  { key: 'meilleurs_scores',  titre: '🏆 MEILLEURS SCORES' },
+  { key: 'meilleurs_streaks', titre: '⚡ STREAKS ARCADE'  },
+  { key: 'boss_vaincus',      titre: '⚔️ BOSS VAINCUS'   },
+];
+
+async function ouvrirLeaderboard() {
+  _lbTab = 0;
+  document.getElementById('popup-lb').classList.remove('hidden');
+  await chargerLeaderboard();
+  _lbRefreshTimer = setInterval(chargerLeaderboard, 30000);
+}
+
+function fermerLeaderboard() {
+  document.getElementById('popup-lb').classList.add('hidden');
+  if (_lbRefreshTimer) { clearInterval(_lbRefreshTimer); _lbRefreshTimer = null; }
+}
+
+async function chargerLeaderboard() {
+  if (document.getElementById('popup-lb').classList.contains('hidden')) return;
+  try {
+    const r  = await fetch('/leaderboard');
+    _lbData  = await r.json();
+  } catch {
+    _lbData = null;
+  }
+  afficherOngletLB();
+}
+
+function afficherOngletLB() {
+  const tab   = LB_TABS[_lbTab];
+  const items = _lbData ? (_lbData[tab.key] || []) : null;
+
+  // Titre
+  document.getElementById('lb-title').textContent = tab.titre;
+
+  // Dots
+  document.querySelectorAll('.lb-dot').forEach((d, i) =>
+    d.classList.toggle('lb-dot-active', i === _lbTab));
+
+  // Contenu
+  const content = document.getElementById('lb-content');
+  if (!items) {
+    content.innerHTML = '<div class="lb-loading">CHARGEMENT…</div>';
+    return;
+  }
+  if (!items.length) {
+    content.innerHTML = '<div class="lb-empty">AUCUN RÉSULTAT POUR L\'INSTANT</div>';
+    return;
+  }
+
+  const pseudo_lower = joueurPseudo.toLowerCase();
+
+  content.innerHTML = items.map((row, i) => {
+    const isMe    = row.pseudo.toLowerCase() === pseudo_lower && pseudo_lower;
+    const rankCls = i === 0 ? 'lb-gold' : i === 1 ? 'lb-silver' : i === 2 ? 'lb-bronze' : '';
+    const cls     = ['lb-row', rankCls, isMe ? 'lb-me' : ''].filter(Boolean).join(' ');
+    const medal   = ['🥇','🥈','🥉'][i] || '';
+
+    let valStr;
+    if (tab.key === 'meilleurs_scores') {
+      valStr = `${row.score}/35${row.temps ? ' · ' + row.temps : ''}`;
+    } else if (tab.key === 'meilleurs_streaks') {
+      valStr = `streak ${row.streak}`;
+    } else {
+      valStr = `${row.boss}/9`;
+    }
+
+    return `<div class="${cls}">` +
+      `<span class="lb-rank">${medal || '#' + (i + 1)}</span>` +
+      `<span class="lb-pseudo">${row.pseudo.toUpperCase()}</span>` +
+      `<span class="lb-val">${valStr}</span>` +
+      `</div>`;
+  }).join('');
+}
+
+function lbPrev() {
+  _lbTab = (_lbTab + LB_TABS.length - 1) % LB_TABS.length;
+  afficherOngletLB();
+}
+function lbNext() {
+  _lbTab = (_lbTab + 1) % LB_TABS.length;
+  afficherOngletLB();
 }
 
 // ── Mode Boss ──────────────────────────────────────────────────────────────

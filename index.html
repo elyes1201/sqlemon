@@ -19,11 +19,32 @@
 <!-- Bouton son -->
 <button id="sound-btn" title="Son" onclick="toggleSound()">🔊</button>
 
+<!-- Bouton Leaderboard global — visible partout -->
+<button id="btn-lb" title="Leaderboard global" onclick="ouvrirLeaderboard()">🌍 TOP</button>
+
 <!-- Bouton SAC (badges) — visible uniquement pendant le jeu -->
 <button id="btn-sac" class="hidden" title="Badges" onclick="afficherBadges()">🎖️ SAC</button>
 
 <!-- Bouton TOP (classement) — visible uniquement en mode histoire -->
 <button id="btn-top" class="hidden" title="Classement" onclick="afficherClassement()">🏆 TOP</button>
+
+<!-- Popup Leaderboard global -->
+<div id="popup-lb" class="hidden">
+  <div class="lb-box">
+    <div class="lb-nav-row">
+      <button class="lb-nav-btn" onclick="lbPrev()">◀</button>
+      <div class="lb-title" id="lb-title">🏆 MEILLEURS SCORES</div>
+      <button class="lb-nav-btn" onclick="lbNext()">▶</button>
+    </div>
+    <div id="lb-content" class="lb-content"></div>
+    <div class="lb-dots" id="lb-dots">
+      <span class="lb-dot lb-dot-active"></span>
+      <span class="lb-dot"></span>
+      <span class="lb-dot"></span>
+    </div>
+    <button class="btn-lb-close" onclick="fermerLeaderboard()">✕ FERMER</button>
+  </div>
+</div>
 
 <!-- Flash Boss victoire -->
 <div id="boss-flash" class="hidden"></div>

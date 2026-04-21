@@ -254,7 +254,19 @@ def arcade_valider():
             if succes:
                 st["reussies"] += 1
                 st["streak"]   += 1
-                st["best_streak"] = max(st["best_streak"], st["streak"])
+                if st["streak"] > st["best_streak"]:
+                    st["best_streak"] = st["streak"]
+                    # Persister le nouveau record de streak en DB
+                    try:
+                        _conn_rw = open_db_rw()
+                        _conn_rw.execute(
+                            "UPDATE joueur SET meilleur_streak = ? WHERE id = ? AND meilleur_streak < ?",
+                            (st["best_streak"], joueur_id, st["best_streak"])
+                        )
+                        _conn_rw.commit()
+                        _conn_rw.close()
+                    except Exception:
+                        pass
             else:
                 st["streak"] = 0
 
@@ -448,14 +460,21 @@ def sauvegarder():
     joueur_id = data.get("joueur_id")
     quete     = data.get("quete")
     scores    = data.get("scores")
+    temps = data.get("temps_secondes")
     if not joueur_id or not quete or scores is None:
         return jsonify({"erreur": "Données manquantes"}), 400
     progression = _json.dumps({"quete": quete, "scores": scores})
     conn = open_db_rw()
-    conn.execute(
-        "UPDATE joueur SET quete_actuelle = ?, progression = ? WHERE id = ?",
-        (quete, progression, joueur_id),
-    )
+    if isinstance(temps, int) and temps >= 0:
+        conn.execute(
+            "UPDATE joueur SET quete_actuelle = ?, progression = ?, temps_total_secondes = ? WHERE id = ?",
+            (quete, progression, temps, joueur_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE joueur SET quete_actuelle = ?, progression = ? WHERE id = ?",
+            (quete, progression, joueur_id),
+        )
     conn.commit()
     conn.close()
     return jsonify({"succes": True})
@@ -500,6 +519,95 @@ def sauvegarde_pseudo(pseudo):
     d["boss_vaincus"] = _json.loads(d["boss_vaincus"] or "[]")
     d["trouve"] = True
     return jsonify(d)
+
+
+@app.route("/leaderboard")
+def leaderboard():
+    import json as _json
+
+    def fmt_temps(secs):
+        if secs is None:
+            return None
+        h = secs // 3600
+        m = (secs % 3600) // 60
+        s = secs % 60
+        if h > 0:
+            return f"{h:02d}:{m:02d}:{s:02d}"
+        return f"{m:02d}:{s:02d}"
+
+    conn = open_db()
+
+    # ── Meilleurs scores (quêtes réussies) ─────────────────────────────────
+    rows = conn.execute(
+        "SELECT pseudo, progression, temps_total_secondes FROM joueur WHERE progression IS NOT NULL"
+    ).fetchall()
+    scores_map = {}   # pseudo → {score, temps_secondes}
+    for row in rows:
+        try:
+            prog   = _json.loads(row["progression"])
+            count  = sum(1 for s in prog.get("scores", []) if s is True)
+            pseudo = row["pseudo"]
+            prev   = scores_map.get(pseudo)
+            if prev is None or count > prev["score"] \
+                    or (count == prev["score"] and
+                        row["temps_total_secondes"] is not None and
+                        (prev["temps_secondes"] is None or
+                         row["temps_total_secondes"] < prev["temps_secondes"])):
+                scores_map[pseudo] = {
+                    "score":         count,
+                    "temps_secondes": row["temps_total_secondes"],
+                }
+        except Exception:
+            pass
+    meilleurs_scores = sorted(
+        [{"pseudo": p, "score": v["score"],
+          "temps": fmt_temps(v["temps_secondes"])}
+         for p, v in scores_map.items() if v["score"] > 0],
+        key=lambda x: (x["score"], -(x.get("temps_secondes") or 99999999)),
+        reverse=False
+    )
+    meilleurs_scores.sort(
+        key=lambda x: (-x["score"],
+                       (999999 if x["temps"] is None else
+                        sum(int(p) * f for p, f in
+                            zip(reversed(x["temps"].split(":")),
+                                [1, 60, 3600]))))
+    )
+    meilleurs_scores = meilleurs_scores[:10]
+
+    # ── Meilleurs streaks arcade ───────────────────────────────────────────
+    streak_rows = conn.execute(
+        "SELECT pseudo, MAX(meilleur_streak) AS best FROM joueur "
+        "WHERE meilleur_streak > 0 GROUP BY pseudo "
+        "ORDER BY best DESC LIMIT 10"
+    ).fetchall()
+    meilleurs_streaks = [{"pseudo": r["pseudo"], "streak": r["best"]}
+                         for r in streak_rows]
+
+    # ── Boss vaincus ───────────────────────────────────────────────────────
+    boss_rows = conn.execute(
+        "SELECT pseudo, boss_vaincus FROM joueur"
+    ).fetchall()
+    boss_map = {}   # pseudo → max boss count
+    for row in boss_rows:
+        try:
+            count  = len(_json.loads(row["boss_vaincus"] or "[]"))
+            pseudo = row["pseudo"]
+            if count > boss_map.get(pseudo, 0):
+                boss_map[pseudo] = count
+        except Exception:
+            pass
+    meilleurs_boss = sorted(
+        [{"pseudo": p, "boss": c} for p, c in boss_map.items() if c > 0],
+        key=lambda x: -x["boss"]
+    )[:10]
+
+    conn.close()
+    return jsonify({
+        "meilleurs_scores":  meilleurs_scores,
+        "meilleurs_streaks": meilleurs_streaks,
+        "boss_vaincus":      meilleurs_boss,
+    })
 
 
 @app.route("/executer", methods=["POST"])
